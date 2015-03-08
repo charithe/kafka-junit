@@ -15,14 +15,14 @@ Usage
 
 Create an instance of the rule in your test class and annotate it with `@Rule`.
 
- ```
+ ```java
  @Rule
  public KafkaJunitRule kafkaRule = new KafkaJunitRule();
  ```
 
 `kafkaRule` can now be referenced from within your test methods.
 
-```
+```java
 @Test
 public void testSomething(){
     // Use the built-in sync producer configuration
