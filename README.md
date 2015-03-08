@@ -28,7 +28,7 @@ public void testSomething(){
     // Use the built-in sync producer configuration
     ProducerConfig producerConfig = kafkaRule.producerConfig();
 
-    // Use the bult-in consumer configuration
+    // Use the built-in consumer configuration
     ConsumerConfig consumerConfig = kafkaRule.consumerConfig();
 
     // Alternatively, the Zookeeper connection String and the broker port can be retrieved to generate your own config
