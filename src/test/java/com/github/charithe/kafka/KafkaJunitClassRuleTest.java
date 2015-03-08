@@ -16,9 +16,6 @@
 
 package com.github.charithe.kafka;
 
-import static org.junit.Assert.*;
-import static org.hamcrest.CoreMatchers.*;
-
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.ConsumerIterator;
@@ -29,6 +26,7 @@ import kafka.message.MessageAndMetadata;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 import kafka.serializer.StringDecoder;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -36,15 +34,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.assertThat;
 
-public class KafkaJunitRuleTest {
 
-    private static final String TOPIC = "topicX";
-    private static final String KEY = "keyX";
-    private static final String VALUE = "valueX";
+public class KafkaJunitClassRuleTest {
 
-    @Rule
-    public KafkaJunitRule kafkaRule = new KafkaJunitRule();
+    private static final String TOPIC = "topicY";
+    private static final String KEY = "keyY";
+    private static final String VALUE = "valueY";
+
+    @ClassRule
+    public static KafkaJunitRule kafkaRule = new KafkaJunitRule();
 
     @Test
     public void testKafkaServerIsUp() {
@@ -74,5 +75,4 @@ public class KafkaJunitRuleTest {
         assertThat(msg.key(), is(equalTo(KEY)));
         assertThat(msg.message(), is(equalTo(VALUE)));
     }
-
 }

@@ -13,14 +13,25 @@ Use https://jitpack.io/ until I get around to doing a proper release to Maven Ce
 Usage
 ------
 
-Create an instance of the rule in your test class and annotate it with `@Rule`.
+Create an instance of the rule in your test class and annotate it with `@Rule`. This will start and stop the
+broker between each test invocation.
 
  ```java
  @Rule
  public KafkaJunitRule kafkaRule = new KafkaJunitRule();
  ```
 
-`kafkaRule` can now be referenced from within your test methods.
+
+ To spin up the broker at the beginning of a test suite and tear it down at the end, use `@ClassRule`.
+
+ ```java
+ @ClassRule
+ public static KafkaJunitRule kafkaRule = new KafkaJunitRule();
+ ```
+
+
+
+`kafkaRule` can be referenced from within your test methods to obtain information about the Kafka broker.
 
 ```java
 @Test

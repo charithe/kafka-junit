@@ -22,9 +22,7 @@ import kafka.server.KafkaConfig;
 import kafka.server.KafkaServerStartable;
 import org.apache.curator.test.InstanceSpec;
 import org.apache.curator.test.TestingServer;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import org.junit.rules.ExternalResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,39 +37,64 @@ import java.util.Properties;
 /**
  * Starts up a local Zookeeper and a Kafka broker
  */
-public class KafkaJunitRule implements TestRule {
+public class KafkaJunitRule extends ExternalResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaJunitRule.class);
 
     private TestingServer zookeeper;
     private KafkaServerStartable kafkaServer;
 
+    private int zookeeperPort;
+    private String zookeeperConnectionString;
     private int kafkaPort = 9092;
     private Path kafkaLogDir;
 
-    @Override
-    public Statement apply(final Statement statement, Description description) {
-        return new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                try {
-                    startKafkaServer();
-                    statement.evaluate();
-                } finally {
-                    stopKafkaServer();
-                }
-            }
-        };
-    }
 
-    private void startKafkaServer() throws Exception {
+    @Override
+    protected void before() throws Throwable {
         zookeeper = new TestingServer(true);
-        String zkQuorumStr = zookeeper.getConnectString();
-        KafkaConfig kafkaConfig = buildKafkaConfig(zkQuorumStr);
+        zookeeperPort = zookeeper.getPort();
+        zookeeperConnectionString = zookeeper.getConnectString();
+        KafkaConfig kafkaConfig = buildKafkaConfig(zookeeperConnectionString);
 
         LOGGER.info("Starting Kafka server with config: {}", kafkaConfig.props().props());
         kafkaServer = new KafkaServerStartable(kafkaConfig);
         kafkaServer.startup();
+    }
+
+    @Override
+    protected void after() {
+        try {
+            if (kafkaServer != null) {
+                LOGGER.info("Shutting down Kafka Server");
+                kafkaServer.shutdown();
+            }
+
+            if (zookeeper != null) {
+                LOGGER.info("Shutting down Zookeeper");
+                zookeeper.close();
+            }
+
+            if (Files.exists(kafkaLogDir)) {
+                LOGGER.info("Deleting the log dir:  {}", kafkaLogDir);
+                Files.walkFileTree(kafkaLogDir, new SimpleFileVisitor<Path>() {
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                        Files.deleteIfExists(file);
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                        Files.deleteIfExists(dir);
+                        return FileVisitResult.CONTINUE;
+                    }
+                });
+            }
+        }
+        catch(Exception e){
+            LOGGER.error("Failed to clean-up Kafka",e);
+        }
     }
 
     private KafkaConfig buildKafkaConfig(String zookeeperQuorum) throws IOException {
@@ -88,34 +111,6 @@ public class KafkaJunitRule implements TestRule {
         return new KafkaConfig(props);
     }
 
-    private void stopKafkaServer() throws IOException {
-        if (kafkaServer != null) {
-            LOGGER.info("Shutting down Kafka Server");
-            kafkaServer.shutdown();
-        }
-
-        if (zookeeper != null) {
-            LOGGER.info("Shutting down Zookeeper");
-            zookeeper.close();
-        }
-
-        if (Files.exists(kafkaLogDir)) {
-            LOGGER.info("Deleting the log dir:  {}", kafkaLogDir);
-            Files.walkFileTree(kafkaLogDir, new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    Files.deleteIfExists(file);
-                    return FileVisitResult.CONTINUE;
-                }
-
-                @Override
-                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                    Files.deleteIfExists(dir);
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-        }
-    }
 
     /**
      * Create a producer configuration.
@@ -140,7 +135,7 @@ public class KafkaJunitRule implements TestRule {
      */
     public ConsumerConfig consumerConfig() {
         Properties props = new Properties();
-        props.put("zookeeper.connect", zookeeper.getConnectString());
+        props.put("zookeeper.connect", zookeeperConnectionString);
         props.put("group.id", "kafka-junit-consumer");
         props.put("zookeeper.session.timeout.ms", "400");
         props.put("zookeeper.sync.time.ms", "200");
@@ -170,7 +165,7 @@ public class KafkaJunitRule implements TestRule {
      * @return zookeeper port
      */
     public int zookeeperPort(){
-        return zookeeper.getPort();
+        return zookeeperPort;
     }
 
     /**
@@ -178,6 +173,6 @@ public class KafkaJunitRule implements TestRule {
      * @return zookeeper connection string
      */
     public String zookeeperConnectionString(){
-        return zookeeper.getConnectString();
+        return zookeeperConnectionString;
     }
 }
