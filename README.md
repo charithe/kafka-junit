@@ -7,7 +7,16 @@ A work-in-progress JUnit rule for starting and tearing down a Kafka broker durin
 Installation
 -------------
 
-Use https://jitpack.io/ until I get around to doing a proper release to Maven Central.
+Release are available on Maven Central.
+
+
+```xml
+<dependency>
+    <groupId>com.github.charithe</groupId>
+    <artifactId>kafka-junit</artifactId>
+    <version>1.0</version>
+</dependency>
+```
 
 
 Usage
