@@ -40,15 +40,27 @@ import java.util.Properties;
 public class KafkaJunitRule extends ExternalResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaJunitRule.class);
+    private static final int ALLOCATE_RANDOM_PORT = -1;
 
     private TestingServer zookeeper;
     private KafkaServerStartable kafkaServer;
 
     private int zookeeperPort;
     private String zookeeperConnectionString;
-    private int kafkaPort = 9092;
+    private int kafkaPort;
     private Path kafkaLogDir;
 
+    public KafkaJunitRule() {
+        this(ALLOCATE_RANDOM_PORT);
+    }
+
+    public KafkaJunitRule(final int kafkaPort) {
+        if (kafkaPort == ALLOCATE_RANDOM_PORT) {
+            this.kafkaPort = InstanceSpec.getRandomPort();
+        } else {
+            this.kafkaPort = kafkaPort;
+        }
+    }
 
     @Override
     protected void before() throws Throwable {
@@ -99,7 +111,6 @@ public class KafkaJunitRule extends ExternalResource {
 
     private KafkaConfig buildKafkaConfig(String zookeeperQuorum) throws IOException {
         kafkaLogDir = Files.createTempDirectory("kafka_junit");
-        kafkaPort = InstanceSpec.getRandomPort();
 
         Properties props = new Properties();
         props.put("port", kafkaPort + "");
