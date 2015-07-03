@@ -1,3 +1,20 @@
+# Eclipse files
+.classpath
+.settings
+.project
+
+# Idea files
 .idea
 *.iml
-target
+
+# Netbeans files
+nbactions.xml
+
+# Maven target folder
+target/
+
+# Eclipse build folder
+bin/
+
+# MAC stuff
+.DS_Store
