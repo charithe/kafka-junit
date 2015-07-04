@@ -41,6 +41,7 @@ public class KafkaJunitRule extends ExternalResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaJunitRule.class);
     private static final int ALLOCATE_RANDOM_PORT = -1;
+    private static final String LOCALHOST = "localhost";
 
     private TestingServer zookeeper;
     private KafkaServerStartable kafkaServer;
@@ -131,7 +132,8 @@ public class KafkaJunitRule extends ExternalResource {
      */
     public ProducerConfig producerConfig() {
         Properties props = new Properties();
-        props.put("metadata.broker.list", "localhost:" + kafkaPort);
+        props.put("bootstrap.servers", LOCALHOST + ":" + kafkaPort);
+        props.put("metadata.broker.list", LOCALHOST + ":" + kafkaPort);
         props.put("serializer.class", "kafka.serializer.StringEncoder");
         props.put("producer.type", "sync");
         props.put("request.required.acks", "1");
