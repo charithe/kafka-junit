@@ -26,13 +26,14 @@ import kafka.message.MessageAndMetadata;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 import kafka.serializer.StringDecoder;
+
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
@@ -41,8 +42,10 @@ import static org.junit.Assert.assertThat;
 public class KafkaJunitClassRuleTest {
 
     private static final String TOPIC = "topicY";
-    private static final String KEY = "keyY";
-    private static final String VALUE = "valueY";
+    private static final String KEY_1 = "keyY1";
+    private static final String VALUE_1 = "valueY1";
+    private static final String KEY_2 = "keyY2";
+    private static final String VALUE_2 = "valueY2";
 
     @ClassRule
     public static KafkaJunitRule kafkaRule = new KafkaJunitRule();
@@ -51,7 +54,7 @@ public class KafkaJunitClassRuleTest {
     public void testKafkaServerIsUp() {
         ProducerConfig conf = kafkaRule.producerConfig();
         Producer<String, String> producer = new Producer<>(conf);
-        producer.send(new KeyedMessage<>(TOPIC, KEY, VALUE));
+        producer.send(new KeyedMessage<>(TOPIC, KEY_1, VALUE_1));
         producer.close();
 
 
@@ -72,7 +75,26 @@ public class KafkaJunitClassRuleTest {
         MessageAndMetadata<String, String> msg = iterator.next();
 
         assertThat(msg, is(notNullValue()));
-        assertThat(msg.key(), is(equalTo(KEY)));
-        assertThat(msg.message(), is(equalTo(VALUE)));
+        assertThat(msg.key(), is(equalTo(KEY_1)));
+        assertThat(msg.message(), is(equalTo(VALUE_1)));
+        
+        consumer.shutdown();
     }
+
+    @Test
+    public void testMessagesCanBeRead() throws TimeoutException {
+        ProducerConfig conf = kafkaRule.producerConfig();
+        Producer<String, String> producer = new Producer<>(conf);
+        producer.send(new KeyedMessage<>(TOPIC, KEY_2, VALUE_2));
+        producer.close();
+
+        List<String> messages = kafkaRule.readStringMessages(TOPIC, 1); 
+        assertThat(messages, is(notNullValue()));
+        assertThat(messages.size(), is(1));
+
+        String msg = messages.get(0);
+        assertThat(msg, is(notNullValue()));
+        assertThat(msg, is(equalTo(VALUE_2)));
+    }
+
 }

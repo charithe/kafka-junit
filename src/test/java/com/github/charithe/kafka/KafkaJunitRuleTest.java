@@ -18,7 +18,6 @@ package com.github.charithe.kafka;
 
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.*;
-
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.ConsumerIterator;
@@ -29,12 +28,14 @@ import kafka.message.MessageAndMetadata;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 import kafka.serializer.StringDecoder;
+
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 
 public class KafkaJunitRuleTest {
@@ -73,6 +74,24 @@ public class KafkaJunitRuleTest {
         assertThat(msg, is(notNullValue()));
         assertThat(msg.key(), is(equalTo(KEY)));
         assertThat(msg.message(), is(equalTo(VALUE)));
+        
+        consumer.shutdown();
+    }
+
+    @Test
+    public void testMessagesCanBeRead() throws TimeoutException {
+        ProducerConfig conf = kafkaRule.producerConfig();
+        Producer<String, String> producer = new Producer<>(conf);
+        producer.send(new KeyedMessage<>(TOPIC, KEY, VALUE));
+        producer.close();
+
+        List<String> messages = kafkaRule.readStringMessages(TOPIC, 1); 
+        assertThat(messages, is(notNullValue()));
+        assertThat(messages.size(), is(1));
+
+        String msg = messages.get(0);
+        assertThat(msg, is(notNullValue()));
+        assertThat(msg, is(equalTo(VALUE)));
     }
 
 }
