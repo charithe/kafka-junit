@@ -97,4 +97,14 @@ public class KafkaJunitClassRuleTest {
         assertThat(msg, is(equalTo(VALUE_2)));
     }
 
+    @Test(expected=TimeoutException.class)
+    public void testTimeout() throws TimeoutException {
+        ProducerConfig conf = kafkaRule.producerConfig();
+        Producer<String, String> producer = new Producer<>(conf);
+        producer.send(new KeyedMessage<>(TOPIC, KEY_1, VALUE_2));
+        producer.close();
+
+        kafkaRule.readStringMessages(TOPIC, 2);
+    }
+
 }

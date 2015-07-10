@@ -213,7 +213,7 @@ public class KafkaJunitRule extends ExternalResource {
                     ConsumerIterator<byte[], T> iterator = messageSteam.iterator();
                     while (messages.size() != expectedMessages && iterator.hasNext()) {
                         T message = iterator.next().message();
-                        LOGGER.info("Received message: {}", message);
+                        LOGGER.debug("Received message: {}", message);
                         messages.add(message);
                     }
                     return messages;
