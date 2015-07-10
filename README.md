@@ -61,7 +61,7 @@ public void testSomething(){
 
 
 
-`kafkaRule` can also be used from within your test methods to read messages from a Kafka topic. This is an utility method that simplifies assertion code in the tests.
+`kafkaRule` can also be used from within your test methods to read messages from a Kafka topic. The rule provides an utility method that simplifies assertion code in tests:
 
 ```java
 @Test
@@ -80,7 +80,7 @@ public void testStringMessageIsDelivered() throws TimeoutException {
 }
 ```
 
-`kafkaRule.readStringMessages(topic, numberOfMessages)` uses `kafka.serializer.StringDecoder` to convert the messages to `String` objects. Alternatively, `kafkaRule.readMessages(topic, numberOfMessages, decoder)` can be used to provide a custom decoder for the messages:
+`kafkaRule.readStringMessages(topic, numberOfMessages)` uses `kafka.serializer.StringDecoder` to convert messages to `String` objects. Alternatively, `kafkaRule.readMessages(topic, numberOfMessages, decoder)` can be used with a custom message decoder:
 
 ```java
 @Test
@@ -105,7 +105,7 @@ public void testCustomMessageIsDelivered() throws TimeoutException {
 }
 ```
 
-`kafkaRule.readMessages()` and `kafkaRule.readStringMessages()` will block for 5 seconds until all expected messages are read. A `java.util.concurrent.TimeoutException` will be thrown if not all the messages can be retrieved from the topic:
+`kafkaRule.readMessages()` and `kafkaRule.readStringMessages()` will block for 5 seconds until all expected messages are read. A `java.util.concurrent.TimeoutException` will be thrown if not all the expected messages can be retrieved from the topic:
 
 ```java
 @Test(expected=TimeoutException.class)
