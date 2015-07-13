@@ -65,7 +65,7 @@ public class KafkaJunitRule extends ExternalResource {
     private TestingServer zookeeper;
     private KafkaServerStartable kafkaServer;
 
-    private int zookeeperPort;
+    private int zookeeperPort = -1;
     private String zookeeperConnectionString;
     private int kafkaPort;
     private Path kafkaLogDir;
@@ -73,6 +73,12 @@ public class KafkaJunitRule extends ExternalResource {
     public KafkaJunitRule() {
         this(ALLOCATE_RANDOM_PORT);
     }
+
+    public KafkaJunitRule(final int kafkaPort, final int zookeeperPort){
+        this(kafkaPort);
+        this.zookeeperPort = zookeeperPort;
+    }
+
 
     public KafkaJunitRule(final int kafkaPort) {
         if (kafkaPort == ALLOCATE_RANDOM_PORT) {
@@ -84,8 +90,12 @@ public class KafkaJunitRule extends ExternalResource {
 
     @Override
     protected void before() throws Throwable {
-        zookeeper = new TestingServer(true);
-        zookeeperPort = zookeeper.getPort();
+        if (zookeeperPort == -1) {
+            zookeeper = new TestingServer(true);
+            zookeeperPort = zookeeper.getPort();
+        }else{
+            zookeeper = new TestingServer(zookeeperPort, true);
+        }
         zookeeperConnectionString = zookeeper.getConnectString();
         KafkaConfig kafkaConfig = buildKafkaConfig(zookeeperConnectionString);
 
@@ -97,6 +107,7 @@ public class KafkaJunitRule extends ExternalResource {
     @Override
     protected void after() {
         try {
+
             if (kafkaServer != null) {
                 LOGGER.info("Shutting down Kafka Server");
                 kafkaServer.shutdown();
@@ -129,6 +140,28 @@ public class KafkaJunitRule extends ExternalResource {
         }
     }
 
+    /**
+     *
+     * Shutdown Kafka Broker before the test termination to test consumer exceptions
+     *
+     */
+    public void shutdownKafka() {
+        if (kafkaServer != null) {
+            LOGGER.info("Shutting down Kafka Server");
+            kafkaServer.shutdown();
+        }
+    }
+
+    /**
+     * Restarts the server
+     */
+    public void start(){
+        if (kafkaServer != null) {
+            LOGGER.info("Starting Kafka Server");
+            kafkaServer.startup();
+        }
+    }
+
     private KafkaConfig buildKafkaConfig(String zookeeperQuorum) throws IOException {
         kafkaLogDir = Files.createTempDirectory("kafka_junit");
 
@@ -137,7 +170,6 @@ public class KafkaJunitRule extends ExternalResource {
         props.put("broker.id", "1");
         props.put("log.dirs", kafkaLogDir.toAbsolutePath().toString());
         props.put("zookeeper.connect", zookeeperQuorum);
-
 
         return new KafkaConfig(props);
     }
