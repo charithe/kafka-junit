@@ -16,10 +16,20 @@
 
 package com.github.charithe.kafka;
 
+import static java.util.Collections.singletonMap;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
+import kafka.consumer.ConsumerIterator;
+import kafka.consumer.KafkaStream;
+import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.producer.ProducerConfig;
+import kafka.serializer.Decoder;
+import kafka.serializer.DefaultDecoder;
+import kafka.serializer.StringDecoder;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServerStartable;
+
 import org.apache.curator.test.InstanceSpec;
 import org.apache.curator.test.TestingServer;
 import org.junit.rules.ExternalResource;
@@ -32,7 +42,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Starts up a local Zookeeper and a Kafka broker
@@ -155,6 +174,64 @@ public class KafkaJunitRule extends ExternalResource {
         props.put("auto.commit.interval.ms", "1000");
         props.put("auto.offset.reset", "smallest");
         return new ConsumerConfig(props);
+    }
+    
+    /**
+     * Read messages from a given kafka topic as {@link String}.
+     * @param topic name of the topic
+     * @param expectedMessages number of messages to be read
+     * @return list of string messages
+     * @throws TimeoutException if no messages are read after 5 seconds
+     */
+    public List<String> readStringMessages(final String topic, final int expectedMessages) throws TimeoutException {
+        return readMessages(topic, expectedMessages, new StringDecoder(null));
+    }
+    
+    /**
+     * Read messages from a given kafka topic.
+     * @param topic name of the topic
+     * @param expectedMessages number of messages to be read
+     * @param decoder message decoder
+     * @return list of decoded messages
+     * @throws TimeoutException if no messages are read after 5 seconds
+     */
+    public <T> List<T> readMessages(final String topic, final int expectedMessages, final Decoder<T> decoder) throws TimeoutException {
+        ExecutorService singleThread = Executors.newSingleThreadExecutor();
+        ConsumerConnector connector = null;
+        try {
+            connector = Consumer.createJavaConsumerConnector(consumerConfig());
+
+            Map<String, List<KafkaStream<byte[], T>>> streams = connector.createMessageStreams(
+                    singletonMap(topic, 1), new DefaultDecoder(null), decoder);
+            
+            final KafkaStream<byte[], T> messageSteam = streams.get(topic).get(0);
+            
+            Future<List<T>> future = singleThread.submit(new Callable<List<T>>() {
+                @Override
+                public List<T> call() throws Exception {
+                    List<T> messages = new ArrayList<>(expectedMessages);
+                    ConsumerIterator<byte[], T> iterator = messageSteam.iterator();
+                    while (messages.size() != expectedMessages && iterator.hasNext()) {
+                        T message = iterator.next().message();
+                        LOGGER.debug("Received message: {}", message);
+                        messages.add(message);
+                    }
+                    return messages;
+                }
+            });
+            
+            return future.get(5, SECONDS);
+            
+        } catch (TimeoutException | InterruptedException | ExecutionException e) {
+            throw new TimeoutException("Timed out waiting for messages");
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected exception while reading messages", e);
+        } finally {
+            singleThread.shutdown();
+            if (connector != null) {
+                connector.shutdown();
+            }
+        }
     }
 
     /**
