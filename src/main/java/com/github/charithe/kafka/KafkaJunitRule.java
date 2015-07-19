@@ -142,6 +142,15 @@ public class KafkaJunitRule extends ExternalResource {
         return new KafkaConfig(props);
     }
 
+    /**
+     * Create a producer configuration.
+     * Sets the serializer class to "DefaultEncoder" and producer type to "sync"
+     *
+     * @return {@link ProducerConfig}
+     */
+    public ProducerConfig producerConfigWithDefaultEncoder() {
+        return producerConfig("kafka.serializer.DefaultEncoder");
+    }
 
     /**
      * Create a producer configuration.
@@ -149,11 +158,21 @@ public class KafkaJunitRule extends ExternalResource {
      *
      * @return {@link ProducerConfig}
      */
-    public ProducerConfig producerConfig() {
+    public ProducerConfig producerConfigWithStringEncoder() {
+        return producerConfig("kafka.serializer.StringEncoder");
+    }
+
+    /**
+     * Create a producer configuration.
+     * Sets the serializer class to specified encoder and producer type to "sync"
+     *
+     * @return {@link ProducerConfig}
+     */
+    public ProducerConfig producerConfig(String serializerClass) {
         Properties props = new Properties();
         props.put("bootstrap.servers", LOCALHOST + ":" + kafkaPort);
         props.put("metadata.broker.list", LOCALHOST + ":" + kafkaPort);
-        props.put("serializer.class", "kafka.serializer.StringEncoder");
+        props.put("serializer.class", serializerClass);
         props.put("producer.type", "sync");
         props.put("request.required.acks", "1");
 

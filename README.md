@@ -14,7 +14,7 @@ Release are available on Maven Central.
 <dependency>
     <groupId>com.github.charithe</groupId>
     <artifactId>kafka-junit</artifactId>
-    <version>1.3</version>
+    <version>1.4</version>
 </dependency>
 ```
 
@@ -46,7 +46,7 @@ broker between each test invocation.
 @Test
 public void testSomething(){
     // Use the built-in sync producer configuration
-    ProducerConfig producerConfig = kafkaRule.producerConfig();
+    ProducerConfig producerConfig = kafkaRule.producerConfigWithStringEncoder();
 
     // Use the built-in consumer configuration
     ConsumerConfig consumerConfig = kafkaRule.consumerConfig();
@@ -67,7 +67,7 @@ public void testSomething(){
 @Test
 public void testStringMessageIsDelivered() throws TimeoutException {
     // Create a Kafka producer using the built-in producer configuration
-    ProducerConfig conf = kafkaRule.producerConfig();
+    ProducerConfig conf = kafkaRule.producerConfigWithStringEncoder();
     Producer<String, String> producer = new Producer<>(conf);
     producer.send(new KeyedMessage<>("topic", "key", "value"));
     producer.close();
@@ -92,7 +92,7 @@ public void testCustomMessageIsDelivered() throws TimeoutException {
     final String IdNameBeanJson = toJson(idNameBean);
 
     // Create a Kafka producer using the built-in producer configuration
-    ProducerConfig conf = kafkaRule.producerConfig();
+    ProducerConfig conf = kafkaRule.producerConfigWithStringEncoder();
     Producer<String, String> producer = new Producer<>(conf);
     producer.send(new KeyedMessage<>("topic", "key", IdNameBeanJson));
     producer.close();
@@ -111,7 +111,7 @@ public void testCustomMessageIsDelivered() throws TimeoutException {
 @Test(expected=TimeoutException.class)
 public void testTimeout() throws TimeoutException {
     // Create a Kafka producer using the built-in producer configuration
-    ProducerConfig conf = kafkaRule.producerConfig();
+    ProducerConfig conf = kafkaRule.producerConfigWithStringEncoder();
     Producer<String, String> producer = new Producer<>(conf);
     producer.send(new KeyedMessage<>("topic", "key", "value"));
     producer.close();

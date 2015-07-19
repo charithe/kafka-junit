@@ -49,7 +49,7 @@ public class KafkaJunitRuleTest {
 
     @Test
     public void testKafkaServerIsUp() {
-        ProducerConfig conf = kafkaRule.producerConfig();
+        ProducerConfig conf = kafkaRule.producerConfigWithStringEncoder();
         Producer<String, String> producer = new Producer<>(conf);
         producer.send(new KeyedMessage<>(TOPIC, KEY, VALUE));
         producer.close();
@@ -80,7 +80,7 @@ public class KafkaJunitRuleTest {
 
     @Test
     public void testMessagesCanBeRead() throws TimeoutException {
-        ProducerConfig conf = kafkaRule.producerConfig();
+        ProducerConfig conf = kafkaRule.producerConfigWithStringEncoder();
         Producer<String, String> producer = new Producer<>(conf);
         producer.send(new KeyedMessage<>(TOPIC, KEY, VALUE));
         producer.close();
@@ -96,7 +96,7 @@ public class KafkaJunitRuleTest {
 
     @Test(expected=TimeoutException.class)
     public void testTimeout() throws TimeoutException {
-        ProducerConfig conf = kafkaRule.producerConfig();
+        ProducerConfig conf = kafkaRule.producerConfigWithStringEncoder();
         Producer<String, String> producer = new Producer<>(conf);
         producer.send(new KeyedMessage<>(TOPIC, KEY, VALUE));
         producer.close();
