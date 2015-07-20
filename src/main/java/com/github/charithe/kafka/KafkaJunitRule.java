@@ -61,11 +61,12 @@ public class KafkaJunitRule extends ExternalResource {
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaJunitRule.class);
     private static final int ALLOCATE_RANDOM_PORT = -1;
     private static final String LOCALHOST = "localhost";
+    private static final int SELF_ASSIGNED_ZOOKEEPER_PORT = -1;
 
     private TestingServer zookeeper;
     private KafkaServerStartable kafkaServer;
 
-    private int zookeeperPort = -1;
+    private int zookeeperPort = SELF_ASSIGNED_ZOOKEEPER_PORT;
     private String zookeeperConnectionString;
     private int kafkaPort;
     private Path kafkaLogDir;
@@ -93,7 +94,7 @@ public class KafkaJunitRule extends ExternalResource {
         if (zookeeperPort == -1) {
             zookeeper = new TestingServer(true);
             zookeeperPort = zookeeper.getPort();
-        }else{
+        } else {
             zookeeper = new TestingServer(zookeeperPort, true);
         }
         zookeeperConnectionString = zookeeper.getConnectString();
@@ -101,17 +102,14 @@ public class KafkaJunitRule extends ExternalResource {
 
         LOGGER.info("Starting Kafka server with config: {}", kafkaConfig.props().props());
         kafkaServer = new KafkaServerStartable(kafkaConfig);
-        kafkaServer.startup();
+        startKafka();
     }
 
     @Override
     protected void after() {
         try {
 
-            if (kafkaServer != null) {
-                LOGGER.info("Shutting down Kafka Server");
-                kafkaServer.shutdown();
-            }
+            shutdownKafka();
 
             if (zookeeper != null) {
                 LOGGER.info("Shutting down Zookeeper");
@@ -153,9 +151,9 @@ public class KafkaJunitRule extends ExternalResource {
     }
 
     /**
-     * Restarts the server
+     * Starts the server
      */
-    public void start(){
+    public void startKafka(){
         if (kafkaServer != null) {
             LOGGER.info("Starting Kafka Server");
             kafkaServer.startup();
