@@ -61,12 +61,11 @@ public class KafkaJunitRule extends ExternalResource {
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaJunitRule.class);
     private static final int ALLOCATE_RANDOM_PORT = -1;
     private static final String LOCALHOST = "localhost";
-    private static final int SELF_ASSIGNED_ZOOKEEPER_PORT = -1;
 
     private TestingServer zookeeper;
     private KafkaServerStartable kafkaServer;
 
-    private int zookeeperPort = SELF_ASSIGNED_ZOOKEEPER_PORT;
+    private int zookeeperPort = ALLOCATE_RANDOM_PORT;
     private String zookeeperConnectionString;
     private int kafkaPort;
     private Path kafkaLogDir;
@@ -91,7 +90,7 @@ public class KafkaJunitRule extends ExternalResource {
 
     @Override
     protected void before() throws Throwable {
-        if (zookeeperPort == -1) {
+        if (zookeeperPort == ALLOCATE_RANDOM_PORT) {
             zookeeper = new TestingServer(true);
             zookeeperPort = zookeeper.getPort();
         } else {
