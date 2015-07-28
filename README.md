@@ -1,13 +1,13 @@
-Kafka JUnit Rule
+Kafka JUnit Rule [![Build Status](https://travis-ci.org/charithe/kafka-junit.svg?branch=master)](https://travis-ci.org/charithe/kafka-junit)
 =================
 
-A work-in-progress JUnit rule for starting and tearing down a Kafka broker during tests.
+A work-in-progress JUnit rule for starting and tearing down a Kafka broker during tests. Currently supports Kafka version 0.8.2.1.
 
 
 Installation
 -------------
 
-Release are available on Maven Central.
+Releases are available on Maven Central.
 
 
 ```xml
@@ -18,6 +18,7 @@ Release are available on Maven Central.
 </dependency>
 ```
 
+Snapshot versions containing builds from the latest `master` are available in the Sonatype snapshots repo.
 
 Usage
 ------
