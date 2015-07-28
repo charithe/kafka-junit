@@ -163,6 +163,7 @@ public class KafkaJunitRule extends ExternalResource {
         kafkaLogDir = Files.createTempDirectory("kafka_junit");
 
         Properties props = new Properties();
+        props.put("advertised.host.name", LOCALHOST);
         props.put("port", kafkaPort + "");
         props.put("broker.id", "1");
         props.put("log.dirs", kafkaLogDir.toAbsolutePath().toString());
