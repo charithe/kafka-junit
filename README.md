@@ -14,7 +14,7 @@ Releases are available on Maven Central.
 <dependency>
     <groupId>com.github.charithe</groupId>
     <artifactId>kafka-junit</artifactId>
-    <version>1.5</version>
+    <version>1.6</version>
 </dependency>
 ```
 
