@@ -9,14 +9,8 @@ Installation
 
 Releases are available on Maven Central.
 
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.charithe/kafka-junit/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.charithe/kafka-junit)
 
-```xml
-<dependency>
-    <groupId>com.github.charithe</groupId>
-    <artifactId>kafka-junit</artifactId>
-    <version>1.6</version>
-</dependency>
-```
 
 Snapshot versions containing builds from the latest `master` are available in the Sonatype snapshots repo.
 
