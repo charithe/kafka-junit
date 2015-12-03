@@ -35,7 +35,7 @@
         <appender-ref ref="ASYNC" />
     </logger>
 
-    <root level="DEBUG">
+    <root level="INFO">
         <appender-ref ref="ASYNC" />
     </root>
 </configuration>

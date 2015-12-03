@@ -195,7 +195,7 @@ public class KafkaJunitRule extends ExternalResource {
      */
     public ProducerConfig producerConfig(String serializerClass) {
         Properties props = new Properties();
-        props.put("bootstrap.servers", LOCALHOST + ":" + kafkaPort);
+        props.put("external.bootstrap.servers", LOCALHOST + ":" + kafkaPort);
         props.put("metadata.broker.list", LOCALHOST + ":" + kafkaPort);
         props.put("serializer.class", serializerClass);
         props.put("producer.type", "sync");

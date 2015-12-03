@@ -1,7 +1,13 @@
 Kafka JUnit Rule [![Build Status](https://travis-ci.org/charithe/kafka-junit.svg?branch=master)](https://travis-ci.org/charithe/kafka-junit) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.charithe/kafka-junit/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.charithe/kafka-junit)
 =================
 
-A work-in-progress JUnit rule for starting and tearing down a Kafka broker during tests. Currently supports Kafka version 0.8.2.2.
+JUnit rule for starting and tearing down a Kafka broker during tests.
+
+|Version | Kafka Version |
+|------------------------|
+|1.6     | 0.8.2.1       |
+|1.7     | 0.8.2.2       |
+|1.8     | 0.9.0.0       |
 
 
 Installation
