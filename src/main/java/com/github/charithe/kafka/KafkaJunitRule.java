@@ -16,8 +16,6 @@
 
 package com.github.charithe.kafka;
 
-import static java.util.Collections.singletonMap;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.ConsumerIterator;
@@ -29,7 +27,6 @@ import kafka.serializer.DefaultDecoder;
 import kafka.serializer.StringDecoder;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServerStartable;
-
 import org.apache.curator.test.InstanceSpec;
 import org.apache.curator.test.TestingServer;
 import org.junit.rules.ExternalResource;
@@ -46,12 +43,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
+
+import static java.util.Collections.singletonMap;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Starts up a local Zookeeper and a Kafka broker
@@ -99,7 +94,7 @@ public class KafkaJunitRule extends ExternalResource {
         zookeeperConnectionString = zookeeper.getConnectString();
         KafkaConfig kafkaConfig = buildKafkaConfig(zookeeperConnectionString);
 
-        LOGGER.info("Starting Kafka server with config: {}", kafkaConfig.props().props());
+        LOGGER.info("Starting Kafka server with config: {}", kafkaConfig.props());
         kafkaServer = new KafkaServerStartable(kafkaConfig);
         startKafka();
     }
