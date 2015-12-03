@@ -3,11 +3,11 @@ Kafka JUnit Rule [![Build Status](https://travis-ci.org/charithe/kafka-junit.svg
 
 JUnit rule for starting and tearing down a Kafka broker during tests.
 
-|Version | Kafka Version |
-|------------------------|
-|1.6     | 0.8.2.1       |
-|1.7     | 0.8.2.2       |
-|1.8     | 0.9.0.0       |
+Version | Kafka Version 
+--------|---------------
+1.6     | 0.8.2.1       
+1.7     | 0.8.2.2       
+1.8     | 0.9.0.0       
 
 
 Installation
