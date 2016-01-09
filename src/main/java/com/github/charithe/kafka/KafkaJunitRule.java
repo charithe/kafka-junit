@@ -56,6 +56,7 @@ public class KafkaJunitRule extends ExternalResource {
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaJunitRule.class);
     private static final int ALLOCATE_RANDOM_PORT = -1;
     private static final String LOCALHOST = "localhost";
+    private Properties brokerProperties=null;
 
     private TestingServer zookeeper;
     private KafkaServerStartable kafkaServer;
@@ -72,6 +73,18 @@ public class KafkaJunitRule extends ExternalResource {
     public KafkaJunitRule(final int kafkaPort, final int zookeeperPort){
         this(kafkaPort);
         this.zookeeperPort = zookeeperPort;
+    }
+
+    /**
+     *
+     * @param brokerProperties any additional properties that should be passed to the broker such as
+     *                         default number of partitions, io threads, etc.  These properties will
+     *                         be merged with, but not override, the properties required for the broker
+     *                         to work.
+     */
+    public KafkaJunitRule(final int kafkaPort, final int zookeeperPort,Properties brokerProperties){
+        this(kafkaPort,zookeeperPort);
+        this.brokerProperties=brokerProperties;
     }
 
 
@@ -158,11 +171,15 @@ public class KafkaJunitRule extends ExternalResource {
         kafkaLogDir = Files.createTempDirectory("kafka_junit");
 
         Properties props = new Properties();
+        if(brokerProperties!=null){
+            props.putAll(brokerProperties);
+        }
         props.put("advertised.host.name", LOCALHOST);
         props.put("port", kafkaPort + "");
         props.put("broker.id", "1");
         props.put("log.dirs", kafkaLogDir.toAbsolutePath().toString());
         props.put("zookeeper.connect", zookeeperQuorum);
+
 
         return new KafkaConfig(props);
     }
