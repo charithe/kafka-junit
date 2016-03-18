@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Charith Ellawala
+ * Copyright 2016 Charith Ellawala
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,22 @@
 
 package com.github.charithe.kafka;
 
-import kafka.consumer.Consumer;
-import kafka.consumer.ConsumerConfig;
-import kafka.consumer.ConsumerIterator;
-import kafka.consumer.KafkaStream;
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.javaapi.producer.Producer;
-import kafka.message.MessageAndMetadata;
-import kafka.producer.KeyedMessage;
-import kafka.producer.ProducerConfig;
-import kafka.serializer.StringDecoder;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.junit.Assert.assertThat;
 
+import com.google.common.collect.Lists;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeoutException;
-
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.assertThat;
-
 
 public class KafkaJunitClassRuleTest {
 
@@ -52,43 +46,30 @@ public class KafkaJunitClassRuleTest {
 
     @Test
     public void testKafkaServerIsUp() {
-        ProducerConfig conf = kafkaRule.producerConfigWithStringEncoder();
-        Producer<String, String> producer = new Producer<>(conf);
-        producer.send(new KeyedMessage<>(TOPIC, KEY_1, VALUE_1));
-        producer.close();
+        try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
+            producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_1));
+        }
 
+        try (KafkaConsumer<String, String> consumer = kafkaRule.createStringConsumer()) {
+            consumer.subscribe(Lists.newArrayList(TOPIC));
+            ConsumerRecords<String, String> records = consumer.poll(500);
+            assertThat(records, is(notNullValue()));
+            assertThat(records.isEmpty(), is(false));
 
-        ConsumerConfig consumerConf = kafkaRule.consumerConfig();
-        ConsumerConnector consumer = Consumer.createJavaConsumerConnector(consumerConf);
-        Map<String, Integer> topicCountMap = new HashMap<>();
-        topicCountMap.put(TOPIC, 1);
-        Map<String, List<KafkaStream<String, String>>> consumerMap = consumer
-                .createMessageStreams(topicCountMap, new StringDecoder(consumerConf.props()),
-                        new StringDecoder(consumerConf.props()));
-        List<KafkaStream<String, String>> streams = consumerMap.get(TOPIC);
-
-        assertThat(streams, is(notNullValue()));
-        assertThat(streams.size(), is(equalTo(1)));
-
-        KafkaStream<String, String> ks = streams.get(0);
-        ConsumerIterator<String, String> iterator = ks.iterator();
-        MessageAndMetadata<String, String> msg = iterator.next();
-
-        assertThat(msg, is(notNullValue()));
-        assertThat(msg.key(), is(equalTo(KEY_1)));
-        assertThat(msg.message(), is(equalTo(VALUE_1)));
-        
-        consumer.shutdown();
+            ConsumerRecord<String, String> msg = records.iterator().next();
+            assertThat(msg, is(notNullValue()));
+            assertThat(msg.key(), is(equalTo(KEY_1)));
+            assertThat(msg.value(), is(equalTo(VALUE_1)));
+        }
     }
 
     @Test
     public void testMessagesCanBeRead() throws TimeoutException {
-        ProducerConfig conf = kafkaRule.producerConfigWithStringEncoder();
-        Producer<String, String> producer = new Producer<>(conf);
-        producer.send(new KeyedMessage<>(TOPIC, KEY_2, VALUE_2));
-        producer.close();
+        try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
+            producer.send(new ProducerRecord<>(TOPIC, KEY_2, VALUE_2));
+        }
 
-        List<String> messages = kafkaRule.readStringMessages(TOPIC, 1); 
+        List<String> messages = kafkaRule.readStringMessages(TOPIC, 1, 5);
         assertThat(messages, is(notNullValue()));
         assertThat(messages.size(), is(1));
 
@@ -97,14 +78,11 @@ public class KafkaJunitClassRuleTest {
         assertThat(msg, is(equalTo(VALUE_2)));
     }
 
-    @Test(expected=TimeoutException.class)
+    @Test(expected = TimeoutException.class)
     public void testTimeout() throws TimeoutException {
-        ProducerConfig conf = kafkaRule.producerConfigWithStringEncoder();
-        Producer<String, String> producer = new Producer<>(conf);
-        producer.send(new KeyedMessage<>(TOPIC, KEY_1, VALUE_2));
-        producer.close();
-
-        kafkaRule.readStringMessages(TOPIC, 2);
+        try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
+            producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_2));
+        }
+        kafkaRule.readStringMessages(TOPIC, 2, 1);
     }
-
 }

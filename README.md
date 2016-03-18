@@ -7,8 +7,11 @@ Version | Kafka Version
 --------|---------------
 1.6     | 0.8.2.1       
 1.7     | 0.8.2.2       
-1.8     | 0.9.0.0       
+1.8     | 0.9.0.0  
+2.0     | 0.9.0.1
 
+
+Please note that version 2.0 is for Java 1.8 and up and contains some breaking API changes.
 
 Installation
 -------------
@@ -46,11 +49,11 @@ broker between each test invocation.
 ```java
 @Test
 public void testSomething(){
-    // Use the built-in sync producer configuration
-    ProducerConfig producerConfig = kafkaRule.producerConfigWithStringEncoder();
+    // Use the built-in producer
+    KafkaProducer<String, String> producer = kafkaRule.createStringProducer();
 
-    // Use the built-in consumer configuration
-    ConsumerConfig consumerConfig = kafkaRule.consumerConfig();
+    // Use the built-in consumer 
+    KafkaConsumer<String, String> consumer = kafkaRule.createStringConsumer();
 
     // Alternatively, the Zookeeper connection String and the broker port can be retrieved to generate your own config
     String zkConnStr = kafkaRule.zookeeperConnectionString();
@@ -62,62 +65,25 @@ public void testSomething(){
 
 
 
-`kafkaRule` can also be used from within your test methods to read messages from a Kafka topic. The rule provides an utility method that simplifies assertion code in tests:
+There are also helper methods available to read a number of messages with a configurable timeout. 
 
 ```java
 @Test
-public void testStringMessageIsDelivered() throws TimeoutException {
-    // Create a Kafka producer using the built-in producer configuration
-    ProducerConfig conf = kafkaRule.producerConfigWithStringEncoder();
-    Producer<String, String> producer = new Producer<>(conf);
-    producer.send(new KeyedMessage<>("topic", "key", "value"));
-    producer.close();
+public void testMessagesCanBeRead() throws TimeoutException {
+    // write a message 
+    try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
+        producer.send(new ProducerRecord<>(TOPIC, KEY, VALUE));
+    }
 
-    List<String> messages = kafkaRule.readStringMessages("topic", 1);
+    // attempt to read a single message with a 5 second timeout
+    List<String> messages = kafkaRule.readStringMessages(TOPIC, 1, 5);
     assertThat(messages, is(notNullValue()));
     assertThat(messages.size(), is(1));
-    assertThat(messages.get(0), is("value"));
-    ...
+
+    String msg = messages.get(0);
+    assertThat(msg, is(notNullValue()));
+    assertThat(msg, is(equalTo(VALUE)));
 }
 ```
 
-`kafkaRule.readStringMessages(topic, numberOfMessages)` uses `kafka.serializer.StringDecoder` to convert messages to `String` objects. Alternatively, `kafkaRule.readMessages(topic, numberOfMessages, decoder)` can be used with a custom message decoder:
-
-```java
-@Test
-public void testCustomMessageIsDelivered() throws TimeoutException {
-    // IdNameBean is a POJO with 2 properties: id and name
-    final IdNameBean idNameBean = new IdNameBean("someId","someName");
-    
-    // Create a JSON string out of a bean, in this case {"id": "someId","name": "someName"}
-    final String IdNameBeanJson = toJson(idNameBean);
-
-    // Create a Kafka producer using the built-in producer configuration
-    ProducerConfig conf = kafkaRule.producerConfigWithStringEncoder();
-    Producer<String, String> producer = new Producer<>(conf);
-    producer.send(new KeyedMessage<>("topic", "key", IdNameBeanJson));
-    producer.close();
-
-    List<IdNameBean> messages = kafkaRule.readMessages("topic", 1, new IdNameBeanJsonDecoder());
-    assertThat(messages, is(notNullValue()));
-    assertThat(messages.size(), is(1));
-    assertThat(messages.get(0), is(idNameBean));
-    ...
-}
-```
-
-`kafkaRule.readMessages()` and `kafkaRule.readStringMessages()` will block for 5 seconds until all expected messages are read. A `java.util.concurrent.TimeoutException` will be thrown if not all the expected messages can be retrieved from the topic:
-
-```java
-@Test(expected=TimeoutException.class)
-public void testTimeout() throws TimeoutException {
-    // Create a Kafka producer using the built-in producer configuration
-    ProducerConfig conf = kafkaRule.producerConfigWithStringEncoder();
-    Producer<String, String> producer = new Producer<>(conf);
-    producer.send(new KeyedMessage<>("topic", "key", "value"));
-    producer.close();
-
-    // Expect 2 messages but only 1 has been sent
-    kafkaRule.readStringMessages("topic", 2);
-}
-```
+Refer to unit tests for more examples.

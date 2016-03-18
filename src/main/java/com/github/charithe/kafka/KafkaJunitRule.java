@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Charith Ellawala
+ * Copyright 2016 Charith Ellawala
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,21 @@
 
 package com.github.charithe.kafka;
 
-import kafka.consumer.Consumer;
-import kafka.consumer.ConsumerConfig;
-import kafka.consumer.ConsumerIterator;
-import kafka.consumer.KafkaStream;
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.producer.ProducerConfig;
-import kafka.serializer.Decoder;
-import kafka.serializer.DefaultDecoder;
-import kafka.serializer.StringDecoder;
+import static java.util.concurrent.TimeUnit.SECONDS;
+
+import com.google.common.collect.Lists;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServerStartable;
 import org.apache.curator.test.InstanceSpec;
 import org.apache.curator.test.TestingServer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.rules.ExternalResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,22 +43,20 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
 
-import static java.util.Collections.singletonMap;
-import static java.util.concurrent.TimeUnit.SECONDS;
-
-/**
- * Starts up a local Zookeeper and a Kafka broker
- */
 public class KafkaJunitRule extends ExternalResource {
 
+    private static final int POLL_TIMEOUT_MS = 1000;
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaJunitRule.class);
     private static final int ALLOCATE_RANDOM_PORT = -1;
     private static final String LOCALHOST = "localhost";
-    private Properties brokerProperties=null;
+    private Properties brokerProperties = null;
 
     private TestingServer zookeeper;
     private KafkaServerStartable kafkaServer;
@@ -70,30 +70,22 @@ public class KafkaJunitRule extends ExternalResource {
         this(ALLOCATE_RANDOM_PORT);
     }
 
-    public KafkaJunitRule(final int kafkaPort, final int zookeeperPort){
-        this(kafkaPort);
-        this.zookeeperPort = zookeeperPort;
-    }
-
-    /**
-     *
-     * @param brokerProperties any additional properties that should be passed to the broker such as
-     *                         default number of partitions, io threads, etc.  These properties will
-     *                         be merged with, but not override, the properties required for the broker
-     *                         to work.
-     */
-    public KafkaJunitRule(final int kafkaPort, final int zookeeperPort,Properties brokerProperties){
-        this(kafkaPort,zookeeperPort);
-        this.brokerProperties=brokerProperties;
-    }
-
-
     public KafkaJunitRule(final int kafkaPort) {
         if (kafkaPort == ALLOCATE_RANDOM_PORT) {
             this.kafkaPort = InstanceSpec.getRandomPort();
         } else {
             this.kafkaPort = kafkaPort;
         }
+    }
+
+    public KafkaJunitRule(final int kafkaPort, final int zookeeperPort) {
+        this(kafkaPort);
+        this.zookeeperPort = zookeeperPort;
+    }
+
+    public KafkaJunitRule(final int kafkaPort, final int zookeeperPort, Properties brokerProperties) {
+        this(kafkaPort, zookeeperPort);
+        this.brokerProperties = brokerProperties;
     }
 
     @Override
@@ -115,7 +107,6 @@ public class KafkaJunitRule extends ExternalResource {
     @Override
     protected void after() {
         try {
-
             shutdownKafka();
 
             if (zookeeper != null) {
@@ -139,16 +130,13 @@ public class KafkaJunitRule extends ExternalResource {
                     }
                 });
             }
-        }
-        catch(Exception e){
-            LOGGER.error("Failed to clean-up Kafka",e);
+        } catch (Exception e) {
+            LOGGER.error("Failed to clean-up Kafka", e);
         }
     }
 
     /**
-     *
      * Shutdown Kafka Broker before the test termination to test consumer exceptions
-     *
      */
     public void shutdownKafka() {
         if (kafkaServer != null) {
@@ -160,7 +148,7 @@ public class KafkaJunitRule extends ExternalResource {
     /**
      * Starts the server
      */
-    public void startKafka(){
+    public void startKafka() {
         if (kafkaServer != null) {
             LOGGER.info("Starting Kafka Server");
             kafkaServer.startup();
@@ -171,159 +159,175 @@ public class KafkaJunitRule extends ExternalResource {
         kafkaLogDir = Files.createTempDirectory("kafka_junit");
 
         Properties props = new Properties();
-        if(brokerProperties!=null){
-            props.putAll(brokerProperties);
-        }
         props.put("advertised.host.name", LOCALHOST);
         props.put("port", kafkaPort + "");
         props.put("broker.id", "1");
         props.put("log.dirs", kafkaLogDir.toAbsolutePath().toString());
         props.put("zookeeper.connect", zookeeperQuorum);
+        props.put("leader.imbalance.check.interval.seconds", "1");
+        props.put("offsets.topic.num.partitions", "1");
+        props.put("offsets.topic.replication.factor", "1");
+        props.put("default.replication.factor", "1");
+        props.put("group.min.session.timeout.ms", "100");
 
+        if (brokerProperties != null) {
+            props.putAll(brokerProperties);
+        }
 
         return new KafkaConfig(props);
     }
 
     /**
      * Create a producer configuration.
-     * Sets the serializer class to "DefaultEncoder" and producer type to "sync"
-     *
-     * @return {@link ProducerConfig}
      */
-    public ProducerConfig producerConfigWithDefaultEncoder() {
-        return producerConfig("kafka.serializer.DefaultEncoder");
-    }
-
-    /**
-     * Create a producer configuration.
-     * Sets the serializer class to "StringEncoder" and producer type to "sync"
-     *
-     * @return {@link ProducerConfig}
-     */
-    public ProducerConfig producerConfigWithStringEncoder() {
-        return producerConfig("kafka.serializer.StringEncoder");
-    }
-
-    /**
-     * Create a producer configuration.
-     * Sets the serializer class to specified encoder and producer type to "sync"
-     *
-     * @return {@link ProducerConfig}
-     */
-    public ProducerConfig producerConfig(String serializerClass) {
+    public Properties producerConfig() {
         Properties props = new Properties();
-        props.put("external.bootstrap.servers", LOCALHOST + ":" + kafkaPort);
-        props.put("metadata.broker.list", LOCALHOST + ":" + kafkaPort);
-        props.put("serializer.class", serializerClass);
-        props.put("producer.type", "sync");
-        props.put("request.required.acks", "1");
+        props.put("bootstrap.servers", LOCALHOST + ":" + kafkaPort);
+        props.put("acks", "1");
+        props.put("request.timeout.ms", "500");
 
-        return new ProducerConfig(props);
+        return props;
     }
 
     /**
-     * Create a consumer configuration
-     * Offset is set to "smallest"
-     * @return {@link ConsumerConfig}
+     * Create a consumer configuration. Offset is set to "earliest".
      */
-    public ConsumerConfig consumerConfig() {
+    public Properties consumerConfig() {
         Properties props = new Properties();
-        props.put("zookeeper.connect", zookeeperConnectionString);
+        props.put("bootstrap.servers", LOCALHOST + ":" + kafkaPort);
         props.put("group.id", "kafka-junit-consumer");
-        props.put("zookeeper.session.timeout.ms", "400");
-        props.put("zookeeper.sync.time.ms", "200");
-        props.put("auto.commit.interval.ms", "1000");
-        props.put("auto.offset.reset", "smallest");
-        return new ConsumerConfig(props);
-    }
-    
-    /**
-     * Read messages from a given kafka topic as {@link String}.
-     * @param topic name of the topic
-     * @param expectedMessages number of messages to be read
-     * @return list of string messages
-     * @throws TimeoutException if no messages are read after 5 seconds
-     */
-    public List<String> readStringMessages(final String topic, final int expectedMessages) throws TimeoutException {
-        return readMessages(topic, expectedMessages, new StringDecoder(null));
-    }
-    
-    /**
-     * Read messages from a given kafka topic.
-     * @param topic name of the topic
-     * @param expectedMessages number of messages to be read
-     * @param decoder message decoder
-     * @return list of decoded messages
-     * @throws TimeoutException if no messages are read after 5 seconds
-     */
-    public <T> List<T> readMessages(final String topic, final int expectedMessages, final Decoder<T> decoder) throws TimeoutException {
-        ExecutorService singleThread = Executors.newSingleThreadExecutor();
-        ConsumerConnector connector = null;
-        try {
-            connector = Consumer.createJavaConsumerConnector(consumerConfig());
+        props.put("enable.auto.commit", "true");
+        props.put("auto.commit.interval.ms", "200");
+        props.put("auto.offset.reset", "earliest");
+        props.put("heartbeat.interval.ms", "100");
+        props.put("session.timeout.ms", "200");
+        props.put("fetch.max.wait.ms", "200");
 
-            Map<String, List<KafkaStream<byte[], T>>> streams = connector.createMessageStreams(
-                    singletonMap(topic, 1), new DefaultDecoder(null), decoder);
-            
-            final KafkaStream<byte[], T> messageSteam = streams.get(topic).get(0);
-            
-            Future<List<T>> future = singleThread.submit(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    List<T> messages = new ArrayList<>(expectedMessages);
-                    ConsumerIterator<byte[], T> iterator = messageSteam.iterator();
-                    while (messages.size() != expectedMessages && iterator.hasNext()) {
-                        T message = iterator.next().message();
-                        LOGGER.debug("Received message: {}", message);
-                        messages.add(message);
-                    }
-                    return messages;
-                }
-            });
-            
-            return future.get(5, SECONDS);
-            
+        return props;
+    }
+
+    /**
+     * Create a Kafka consumer that reads messages with String key and values
+     *
+     * @return KafkaConsumer
+     */
+    public KafkaConsumer<String, String> createStringConsumer() {
+        return createConsumer(new StringDeserializer(), new StringDeserializer());
+    }
+
+    /**
+     * Create a Kafka consumer using {@link #consumerConfig()}
+     *
+     * @return KafkaConsumer
+     */
+    public <K, V> KafkaConsumer<K, V> createConsumer(Deserializer<K> keyDeserializer,
+                                                     Deserializer<V> valueDeserializer) {
+        return new KafkaConsumer<>(consumerConfig(), keyDeserializer, valueDeserializer);
+    }
+
+    /**
+     * Create a Kafka producer that produces messages with String keys and values
+     */
+    public KafkaProducer<String, String> createStringProducer() {
+        return createProducer(new StringSerializer(), new StringSerializer());
+    }
+
+    /**
+     * Create a Kafka producer using {@link #producerConfig()}
+     *
+     * @return KafkaProducer
+     */
+    public <K, V> KafkaProducer<K, V> createProducer(Serializer<K> keySerializer, Serializer<V> valueSerializer) {
+        return new KafkaProducer<>(producerConfig(), keySerializer, valueSerializer);
+    }
+
+    /**
+     * Read string messages from a Kafka topic
+     *
+     * @param topic            Topic to read from
+     * @param expectedMessages Number of messages expected
+     * @param timeoutSeconds   Seconds to wait
+     * @return List of messages read
+     * @throws TimeoutException If messages cannot be read within the specified timeout
+     */
+    public List<String> readStringMessages(final String topic, final int expectedMessages, final int timeoutSeconds)
+        throws TimeoutException {
+        return readMessages(createStringConsumer(), topic, expectedMessages, timeoutSeconds);
+    }
+
+    /**
+     * Read messages from a topic. Automatically closes the consumer when done.
+     *
+     * @param consumer         Kafka consumer to use. Typically obtained via {@link #createProducer(Serializer,
+     *                         Serializer)}
+     * @param topic            Kafka topic to consume
+     * @param expectedMessages Number of messages expected
+     * @param timeoutSeconds   Seconds to wait
+     * @param <T>              Message type
+     * @return List of messages read
+     * @throws TimeoutException if messages cannot be read within the specified timeout
+     */
+    public <T> List<T> readMessages(final KafkaConsumer<T, T> consumer, final String topic, final int expectedMessages,
+                                    final int timeoutSeconds) throws TimeoutException {
+        ExecutorService singleThread = Executors.newSingleThreadExecutor();
+        try {
+            consumer.subscribe(Lists.newArrayList(topic));
+            Future<List<T>> future = singleThread.submit(() -> {
+                                                             List<T> messages = new ArrayList<>(expectedMessages);
+                                                             while (messages.size() < expectedMessages) {
+                                                                 ConsumerRecords<T, T> records = consumer.poll(POLL_TIMEOUT_MS);
+                                                                 for (ConsumerRecord<T, T> rec : records) {
+                                                                     LOGGER.debug("Received message: {} -> {}", rec.key(), rec.value());
+                                                                     messages.add(rec.value());
+                                                                 }
+                                                             }
+                                                             return messages;
+                                                         }
+            );
+
+            return future.get(timeoutSeconds, SECONDS);
         } catch (TimeoutException | InterruptedException | ExecutionException e) {
             throw new TimeoutException("Timed out waiting for messages");
         } catch (Exception e) {
             throw new RuntimeException("Unexpected exception while reading messages", e);
         } finally {
             singleThread.shutdown();
-            if (connector != null) {
-                connector.shutdown();
-            }
         }
     }
 
     /**
      * Get the Kafka log directory
+     *
      * @return kafka log directory path
      */
-    public Path kafkaLogDir(){
+    public Path kafkaLogDir() {
         return kafkaLogDir;
     }
 
     /**
      * Get the kafka broker port
+     *
      * @return broker port
      */
-    public int kafkaBrokerPort(){
+    public int kafkaBrokerPort() {
         return kafkaPort;
     }
 
     /**
      * Get the zookeeper port
+     *
      * @return zookeeper port
      */
-    public int zookeeperPort(){
+    public int zookeeperPort() {
         return zookeeperPort;
     }
 
     /**
      * Get the zookeeper connection string
+     *
      * @return zookeeper connection string
      */
-    public String zookeeperConnectionString(){
+    public String zookeeperConnectionString() {
         return zookeeperConnectionString;
     }
 }
