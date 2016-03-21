@@ -8,10 +8,10 @@ Version | Kafka Version
 1.6     | 0.8.2.1       
 1.7     | 0.8.2.2       
 1.8     | 0.9.0.0  
-2.0     | 0.9.0.1
+2.1     | 0.9.0.1
 
 
-Please note that version 2.0 is for Java 1.8 and up and contains some breaking API changes.
+Please note that version 2.x contains some breaking API changes.
 
 Installation
 -------------

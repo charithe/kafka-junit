@@ -16,8 +16,6 @@
 
 package com.github.charithe.kafka;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
-
 import com.google.common.collect.Lists;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServerStartable;
@@ -44,11 +42,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class KafkaJunitRule extends ExternalResource {
 
@@ -251,7 +247,7 @@ public class KafkaJunitRule extends ExternalResource {
      * @throws TimeoutException If messages cannot be read within the specified timeout
      */
     public List<String> readStringMessages(final String topic, final int expectedMessages, final int timeoutSeconds)
-        throws TimeoutException {
+            throws TimeoutException {
         return readMessages(createStringConsumer(), topic, expectedMessages, timeoutSeconds);
     }
 
@@ -272,18 +268,20 @@ public class KafkaJunitRule extends ExternalResource {
         ExecutorService singleThread = Executors.newSingleThreadExecutor();
         try {
             consumer.subscribe(Lists.newArrayList(topic));
-            Future<List<T>> future = singleThread.submit(() -> {
-                                                             List<T> messages = new ArrayList<>(expectedMessages);
-                                                             while (messages.size() < expectedMessages) {
-                                                                 ConsumerRecords<T, T> records = consumer.poll(POLL_TIMEOUT_MS);
-                                                                 for (ConsumerRecord<T, T> rec : records) {
-                                                                     LOGGER.debug("Received message: {} -> {}", rec.key(), rec.value());
-                                                                     messages.add(rec.value());
-                                                                 }
-                                                             }
-                                                             return messages;
-                                                         }
-            );
+            Future<List<T>> future = singleThread.submit(new Callable<List<T>>() {
+                @Override
+                public List<T> call() throws Exception {
+                    List<T> messages = new ArrayList<>(expectedMessages);
+                    while (messages.size() < expectedMessages) {
+                        ConsumerRecords<T, T> records = consumer.poll(POLL_TIMEOUT_MS);
+                        for (ConsumerRecord<T, T> rec : records) {
+                            LOGGER.debug("Received message: {} -> {}", rec.key(), rec.value());
+                            messages.add(rec.value());
+                        }
+                    }
+                    return messages;
+                }
+            });
 
             return future.get(timeoutSeconds, SECONDS);
         } catch (TimeoutException | InterruptedException | ExecutionException e) {
