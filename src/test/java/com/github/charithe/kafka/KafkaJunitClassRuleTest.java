@@ -16,11 +16,6 @@
 
 package com.github.charithe.kafka;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
-
 import com.google.common.collect.Lists;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -32,6 +27,10 @@ import org.junit.Test;
 
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 public class KafkaJunitClassRuleTest {
 
@@ -60,6 +59,7 @@ public class KafkaJunitClassRuleTest {
             assertThat(msg, is(notNullValue()));
             assertThat(msg.key(), is(equalTo(KEY_1)));
             assertThat(msg.value(), is(equalTo(VALUE_1)));
+            consumer.commitSync();
         }
     }
 
@@ -84,5 +84,20 @@ public class KafkaJunitClassRuleTest {
             producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_2));
         }
         kafkaRule.readStringMessages(TOPIC, 2, 1);
+    }
+
+    @Test
+    public void testNoDuplicateMessagesAreRead() throws TimeoutException {
+        try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
+            producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_2));
+        }
+
+        kafkaRule.readStringMessages(TOPIC, 1, 1);
+        try {
+            kafkaRule.readStringMessages(TOPIC, 1, 1);
+            fail("Shouldn't read duplicate messages");
+        } catch (TimeoutException e) {
+            // expected
+        }
     }
 }
