@@ -42,6 +42,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.*;
@@ -276,7 +277,10 @@ public class KafkaJunitRule extends ExternalResource {
                 List<T> messages = new ArrayList<>(expectedMessages);
                 while (messages.size() < expectedMessages && !Thread.currentThread().isInterrupted()) {
                     ConsumerRecords<T, T> records = consumer.poll(POLL_TIMEOUT_MS);
-                    for (ConsumerRecord<T, T> rec : records) {
+                    for (Iterator<ConsumerRecord<T, T>> iterator = records.iterator();
+                         messages.size() != expectedMessages && iterator.hasNext(); ) {
+
+                        ConsumerRecord<T, T> rec = iterator.next();
                         LOGGER.debug("Received message: {} -> {}, offset {}", rec.key(), rec.value(), rec.offset());
                         messages.add(rec.value());
                         consumer.commitSync(singletonMap(new TopicPartition(rec.topic(), rec.partition()),

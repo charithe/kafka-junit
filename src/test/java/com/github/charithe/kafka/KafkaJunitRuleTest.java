@@ -99,4 +99,16 @@ public class KafkaJunitRuleTest {
             // expected
         }
     }
+
+    @Test
+    public void testExactNumberOfMessagesAreRead() throws TimeoutException {
+        try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
+            producer.send(new ProducerRecord<>(TOPIC, KEY, VALUE));
+            producer.send(new ProducerRecord<>(TOPIC, KEY, VALUE));
+            producer.send(new ProducerRecord<>(TOPIC, KEY, VALUE));
+        }
+
+        assertThat(kafkaRule.readStringMessages(TOPIC, 1, 1).size(), is(1));
+        assertThat(kafkaRule.readStringMessages(TOPIC, 2, 1).size(), is(2));
+    }
 }

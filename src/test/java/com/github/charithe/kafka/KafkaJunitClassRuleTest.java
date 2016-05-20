@@ -39,6 +39,8 @@ public class KafkaJunitClassRuleTest {
     private static final String VALUE_1 = "valueY1";
     private static final String KEY_2 = "keyY2";
     private static final String VALUE_2 = "valueY2";
+    private static final String KEY_3 = "keyY3";
+    private static final String VALUE_3 = "valueY3";
 
     @ClassRule
     public static KafkaJunitRule kafkaRule = new KafkaJunitRule();
@@ -89,7 +91,7 @@ public class KafkaJunitClassRuleTest {
     @Test
     public void testNoDuplicateMessagesAreRead() throws TimeoutException {
         try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
-            producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_2));
+            producer.send(new ProducerRecord<>(TOPIC, KEY_3, VALUE_3));
         }
 
         kafkaRule.readStringMessages(TOPIC, 1, 1);
@@ -99,5 +101,17 @@ public class KafkaJunitClassRuleTest {
         } catch (TimeoutException e) {
             // expected
         }
+    }
+
+    @Test
+    public void testExactNumberOfMessagesAreRead() throws TimeoutException {
+        try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
+            producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_2));
+            producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_3));
+            producer.send(new ProducerRecord<>(TOPIC, KEY_2, VALUE_3));
+        }
+
+        assertThat(kafkaRule.readStringMessages(TOPIC, 1, 1).size(), is(1));
+        assertThat(kafkaRule.readStringMessages(TOPIC, 2, 1).size(), is(2));
     }
 }
