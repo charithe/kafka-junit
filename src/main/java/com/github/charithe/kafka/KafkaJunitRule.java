@@ -24,7 +24,9 @@ import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -40,10 +42,12 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.*;
 
+import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class KafkaJunitRule extends ExternalResource {
@@ -192,7 +196,7 @@ public class KafkaJunitRule extends ExternalResource {
         Properties props = new Properties();
         props.put("bootstrap.servers", LOCALHOST + ":" + kafkaPort);
         props.put("group.id", "kafka-junit-consumer");
-        props.put("enable.auto.commit", "true");
+        props.put("enable.auto.commit", "false");
         props.put("auto.commit.interval.ms", "200");
         props.put("auto.offset.reset", "earliest");
         props.put("heartbeat.interval.ms", "100");
@@ -266,30 +270,43 @@ public class KafkaJunitRule extends ExternalResource {
     public <T> List<T> readMessages(final KafkaConsumer<T, T> consumer, final String topic, final int expectedMessages,
                                     final int timeoutSeconds) throws TimeoutException {
         ExecutorService singleThread = Executors.newSingleThreadExecutor();
-        try {
-            consumer.subscribe(Lists.newArrayList(topic));
-            Future<List<T>> future = singleThread.submit(new Callable<List<T>>() {
-                @Override
-                public List<T> call() throws Exception {
-                    List<T> messages = new ArrayList<>(expectedMessages);
-                    while (messages.size() < expectedMessages) {
-                        ConsumerRecords<T, T> records = consumer.poll(POLL_TIMEOUT_MS);
-                        for (ConsumerRecord<T, T> rec : records) {
-                            LOGGER.debug("Received message: {} -> {}", rec.key(), rec.value());
-                            messages.add(rec.value());
-                        }
-                    }
-                    return messages;
-                }
-            });
+        consumer.subscribe(Lists.newArrayList(topic));
+        Future<List<T>> future = singleThread.submit(new Callable<List<T>>() {
+            @Override
+            public List<T> call() throws Exception {
+                List<T> messages = new ArrayList<>(expectedMessages);
+                while (messages.size() < expectedMessages && !Thread.currentThread().isInterrupted()) {
+                    ConsumerRecords<T, T> records = consumer.poll(POLL_TIMEOUT_MS);
+                    for (Iterator<ConsumerRecord<T, T>> iterator = records.iterator();
+                         messages.size() != expectedMessages && iterator.hasNext(); ) {
 
+                        ConsumerRecord<T, T> rec = iterator.next();
+                        LOGGER.debug("Received message: {} -> {}, offset {}", rec.key(), rec.value(), rec.offset());
+                        messages.add(rec.value());
+                        consumer.commitSync(singletonMap(new TopicPartition(rec.topic(), rec.partition()),
+                                                         new OffsetAndMetadata(rec.offset() + 1)));
+                    }
+                }
+                return messages;
+            }
+        });
+
+        try {
             return future.get(timeoutSeconds, SECONDS);
-        } catch (TimeoutException | InterruptedException | ExecutionException e) {
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            throw new TimeoutException("Timed out waiting for messages");
+        } catch (InterruptedException | ExecutionException e) {
             throw new TimeoutException("Timed out waiting for messages");
         } catch (Exception e) {
             throw new RuntimeException("Unexpected exception while reading messages", e);
         } finally {
             singleThread.shutdown();
+            try {
+                singleThread.awaitTermination(5, SECONDS);
+            } catch (InterruptedException e) {
+                singleThread.shutdownNow();
+            }
         }
     }
 
