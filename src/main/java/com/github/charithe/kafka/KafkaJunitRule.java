@@ -17,6 +17,9 @@
 package com.github.charithe.kafka;
 
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServerStartable;
 import org.apache.curator.test.InstanceSpec;
@@ -24,7 +27,9 @@ import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -40,6 +45,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.*;
@@ -186,14 +192,23 @@ public class KafkaJunitRule extends ExternalResource {
     }
 
     /**
-     * Create a consumer configuration. Offset is set to "earliest".
+     * Create a consumer configuration. Auto commit is enabled.
+     *
+     * @return
      */
     public Properties consumerConfig() {
+        return consumerConfig(true);
+    }
+
+    /**
+     * Create a consumer configuration. Offset is set to "earliest".
+     */
+    public Properties consumerConfig(boolean enableAutoCommit) {
         Properties props = new Properties();
         props.put("bootstrap.servers", LOCALHOST + ":" + kafkaPort);
         props.put("group.id", "kafka-junit-consumer");
-        props.put("enable.auto.commit", "true");
-        props.put("auto.commit.interval.ms", "200");
+        props.put("enable.auto.commit", String.valueOf(enableAutoCommit));
+        props.put("auto.commit.interval.ms", "10");
         props.put("auto.offset.reset", "earliest");
         props.put("heartbeat.interval.ms", "100");
         props.put("session.timeout.ms", "200");
@@ -203,12 +218,22 @@ public class KafkaJunitRule extends ExternalResource {
     }
 
     /**
-     * Create a Kafka consumer that reads messages with String key and values
+     * Create a Kafka consumer that reads messages with String key and values. Auto commit is enabled for the consumer.
      *
      * @return KafkaConsumer
      */
     public KafkaConsumer<String, String> createStringConsumer() {
         return createConsumer(new StringDeserializer(), new StringDeserializer());
+    }
+
+    /**
+     * Create a Kafka consumer that reads messages with String key and values.
+     *
+     * @param autoCommitEnabled Set to true to enable auto commit
+     * @return KafkaConsumer
+     */
+    public KafkaConsumer<String, String> createStringConsumer(boolean autoCommitEnabled) {
+        return createConsumer(new StringDeserializer(), new StringDeserializer(), autoCommitEnabled);
     }
 
     /**
@@ -219,6 +244,16 @@ public class KafkaJunitRule extends ExternalResource {
     public <K, V> KafkaConsumer<K, V> createConsumer(Deserializer<K> keyDeserializer,
                                                      Deserializer<V> valueDeserializer) {
         return new KafkaConsumer<>(consumerConfig(), keyDeserializer, valueDeserializer);
+    }
+
+    /**
+     * Create a Kafka consumer using {@link #consumerConfig(boolean)}
+     *
+     * @return KafkaConsumer
+     */
+    public <K, V> KafkaConsumer<K, V> createConsumer(Deserializer<K> keyDeserializer, Deserializer<V> valueDeserializer,
+                                                     boolean autoCommitEnabled) {
+        return new KafkaConsumer<>(consumerConfig(autoCommitEnabled), keyDeserializer, valueDeserializer);
     }
 
     /**
@@ -238,31 +273,26 @@ public class KafkaJunitRule extends ExternalResource {
     }
 
     /**
-     * Read string messages from a Kafka topic
-     *
-     * @param topic            Topic to read from
-     * @param expectedMessages Number of messages expected
-     * @param timeoutSeconds   Seconds to wait
-     * @return List of messages read
-     * @throws TimeoutException If messages cannot be read within the specified timeout
+     * @deprecated Use {@link #pollStringMessages(String, int)} instead
+     * <p>
+     * This method is deprecated because it silently creates a new consumer on each invocation -- which could lead to
+     * some mesages being read more than once. It also suffers from the problems described in the deprecation notice for
+     * {@link #readMessages(KafkaConsumer, String, int, int)} as well.
      */
+    @Deprecated
     public List<String> readStringMessages(final String topic, final int expectedMessages, final int timeoutSeconds)
             throws TimeoutException {
         return readMessages(createStringConsumer(), topic, expectedMessages, timeoutSeconds);
     }
 
     /**
-     * Read messages from a topic. Automatically closes the consumer when done.
-     *
-     * @param consumer         Kafka consumer to use. Typically obtained via {@link #createProducer(Serializer,
-     *                         Serializer)}
-     * @param topic            Kafka topic to consume
-     * @param expectedMessages Number of messages expected
-     * @param timeoutSeconds   Seconds to wait
-     * @param <T>              Message type
-     * @return List of messages read
-     * @throws TimeoutException if messages cannot be read within the specified timeout
+     * @deprecated Use {@link #pollMessages(String, int, Deserializer, Deserializer)} instead.
+     * <p>
+     * This method is deprecated due to the switch to Kafka 0.9. The new API can return more than the expected number
+     * of messages unless manual offset management is performed. Since it is impossible to ensure that the passed-in
+     * KafkaConsumer has auto commit disabled, this method should not be used.
      */
+    @Deprecated
     public <T> List<T> readMessages(final KafkaConsumer<T, T> consumer, final String topic, final int expectedMessages,
                                     final int timeoutSeconds) throws TimeoutException {
         ExecutorService singleThread = Executors.newSingleThreadExecutor();
@@ -291,6 +321,38 @@ public class KafkaJunitRule extends ExternalResource {
         } finally {
             singleThread.shutdown();
         }
+    }
+
+    /**
+     * Poll the specified topic for messages
+     *
+     * @param topic             Topic to poll
+     * @param numMessagesToPoll Number of messages to read
+     * @param keyDeserializer   Key deserializer
+     * @param valueDeserializer Value deserializer
+     * @param <K>               Type of Key
+     * @param <V>               Type of Value
+     * @return {@link ListenableFuture} containing a list of {@link ConsumerRecord} objects
+     */
+    public <K, V> ListenableFuture<List<ConsumerRecord<K, V>>> pollMessages(String topic, int numMessagesToPoll,
+                                                                            Deserializer<K> keyDeserializer,
+                                                                            Deserializer<V> valueDeserializer) {
+
+        final KafkaConsumer<K, V> consumer = createConsumer(keyDeserializer, valueDeserializer, false);
+        consumer.subscribe(Lists.newArrayList(topic));
+        ListeningExecutorService executor = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
+        return executor.submit(new RecordConsumer<>(numMessagesToPoll, consumer));
+    }
+
+    /**
+     * Poll the specified topic for String key-valued messages
+     *
+     * @param topic             Topic to poll
+     * @param numMessagesToPoll Number of messages to read
+     * @return {@link ListenableFuture} containing a list of {@link ConsumerRecord} objects
+     */
+    public ListenableFuture<List<ConsumerRecord<String, String>>> pollStringMessages(String topic, int numMessagesToPoll) {
+        return pollMessages(topic, numMessagesToPoll, new StringDeserializer(), new StringDeserializer());
     }
 
     /**
@@ -327,5 +389,42 @@ public class KafkaJunitRule extends ExternalResource {
      */
     public String zookeeperConnectionString() {
         return zookeeperConnectionString;
+    }
+
+
+    private static class RecordConsumer<K, V> implements Callable<List<ConsumerRecord<K, V>>> {
+        private final int numRecordsToPoll;
+        private final KafkaConsumer<K, V> consumer;
+
+        RecordConsumer(int numRecordsToPoll, KafkaConsumer<K, V> consumer) {
+            this.numRecordsToPoll = numRecordsToPoll;
+            this.consumer = consumer;
+        }
+
+        @Override
+        public List<ConsumerRecord<K, V>> call() throws Exception {
+            try {
+                List<ConsumerRecord<K, V>> polledMessages = new ArrayList<>(numRecordsToPoll);
+                while (polledMessages.size() < numRecordsToPoll) {
+                    ConsumerRecords<K, V> records = consumer.poll(0);
+                    for (ConsumerRecord<K, V> rec : records) {
+                        LOGGER.debug("Received message: {} -> {}", rec.key(), rec.value());
+                        polledMessages.add(rec);
+                        consumer.commitSync(
+                                Collections.singletonMap(
+                                        new TopicPartition(rec.topic(), rec.partition()),
+                                        new OffsetAndMetadata(rec.offset() + 1)
+                                )
+                        );
+                        if (polledMessages.size() == numRecordsToPoll) {
+                            break;
+                        }
+                    }
+                }
+                return polledMessages;
+            } finally {
+                consumer.close();
+            }
+        }
     }
 }

@@ -8,7 +8,7 @@ Version | Kafka Version
 1.6     | 0.8.2.1       
 1.7     | 0.8.2.2       
 1.8     | 0.9.0.0  
-2.1     | 0.9.0.1
+2.1, 2.2| 0.9.0.1
 
 
 Please note that version 2.x contains some breaking API changes.
@@ -65,24 +65,24 @@ public void testSomething(){
 
 
 
-There are also helper methods available to read a number of messages with a configurable timeout. 
+There are also some helper methods available to read messages. 
 
 ```java
 @Test
-public void testMessagesCanBeRead() throws TimeoutException {
+public void testMessagesCanBeRead() throws Exception {
     // write a message 
     try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
         producer.send(new ProducerRecord<>(TOPIC, KEY, VALUE));
     }
 
     // attempt to read a single message with a 5 second timeout
-    List<String> messages = kafkaRule.readStringMessages(TOPIC, 1, 5);
+    List<ConsumerRecord<String, String>> messages = kafkaRule.pollStringMessages(TOPIC, 1).get(5, TimeUnit.SECONDS);
     assertThat(messages, is(notNullValue()));
     assertThat(messages.size(), is(1));
 
-    String msg = messages.get(0);
+    ConsumerRecord<String, String> msg = messages.get(0);
     assertThat(msg, is(notNullValue()));
-    assertThat(msg, is(equalTo(VALUE)));
+    assertThat(msg.value(), is(equalTo(VALUE)));
 }
 ```
 

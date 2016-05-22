@@ -16,11 +16,6 @@
 
 package com.github.charithe.kafka;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
-
 import com.google.common.collect.Lists;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -31,7 +26,10 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.util.List;
-import java.util.concurrent.TimeoutException;
+
+import static com.github.charithe.kafka.TestUtil.extractValues;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.assertThat;
 
 public class KafkaJunitClassRuleTest {
 
@@ -40,6 +38,10 @@ public class KafkaJunitClassRuleTest {
     private static final String VALUE_1 = "valueY1";
     private static final String KEY_2 = "keyY2";
     private static final String VALUE_2 = "valueY2";
+    private static final String KEY_3 = "keyY3";
+    private static final String VALUE_3 = "valueY3";
+    private static final String KEY_4 = "keyY4";
+    private static final String VALUE_4 = "valueY4";
 
     @ClassRule
     public static KafkaJunitRule kafkaRule = new KafkaJunitRule();
@@ -64,12 +66,12 @@ public class KafkaJunitClassRuleTest {
     }
 
     @Test
-    public void testMessagesCanBeRead() throws TimeoutException {
+    public void testMessagesCanBeRead() throws Exception {
         try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
             producer.send(new ProducerRecord<>(TOPIC, KEY_2, VALUE_2));
         }
 
-        List<String> messages = kafkaRule.readStringMessages(TOPIC, 1, 5);
+        List<String> messages = extractValues(kafkaRule.pollStringMessages(TOPIC, 1));
         assertThat(messages, is(notNullValue()));
         assertThat(messages.size(), is(1));
 
@@ -78,11 +80,38 @@ public class KafkaJunitClassRuleTest {
         assertThat(msg, is(equalTo(VALUE_2)));
     }
 
-    @Test(expected = TimeoutException.class)
-    public void testTimeout() throws TimeoutException {
+    @Test
+    public void testNoDuplicateMessagesAreRead() throws Exception {
         try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
-            producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_2));
+            producer.send(new ProducerRecord<>(TOPIC, KEY_3, VALUE_3));
         }
-        kafkaRule.readStringMessages(TOPIC, 2, 1);
+
+        List<String> firstMessageSet = extractValues(kafkaRule.pollStringMessages(TOPIC, 1));
+        assertThat(firstMessageSet, hasItem(VALUE_3));
+
+        try {
+            List<String> secondMessageSet = extractValues(kafkaRule.pollStringMessages(TOPIC, 1));
+            assertThat(secondMessageSet, not(hasItem(VALUE_3)));
+        } catch (Exception e) {
+            // expected
+        }
     }
+
+    @Test
+    public void testExactNumberOfMessagesAreRead() throws Exception {
+        try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
+            producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_1));
+            producer.send(new ProducerRecord<>(TOPIC, KEY_2, VALUE_2));
+            producer.send(new ProducerRecord<>(TOPIC, KEY_3, VALUE_3));
+            producer.send(new ProducerRecord<>(TOPIC, KEY_4, VALUE_4));
+        }
+
+        List<String> firstMessageSet = extractValues(kafkaRule.pollStringMessages(TOPIC, 1));
+        assertThat(firstMessageSet.size(), is(equalTo(1)));
+
+        List<String> secondMessageSet = extractValues(kafkaRule.pollStringMessages(TOPIC, 2));
+        assertThat(secondMessageSet.size(), is(equalTo(2)));
+    }
+
+
 }

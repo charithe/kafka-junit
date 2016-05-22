@@ -16,11 +16,6 @@
 
 package com.github.charithe.kafka;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
-
 import com.google.common.collect.Lists;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -31,13 +26,20 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.List;
-import java.util.concurrent.TimeoutException;
+
+import static com.github.charithe.kafka.TestUtil.extractValues;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.assertThat;
 
 public class KafkaJunitRuleTest {
 
     private static final String TOPIC = "topicX";
-    private static final String KEY = "keyX";
-    private static final String VALUE = "valueX";
+    private static final String KEY_1 = "keyX1";
+    private static final String VALUE_1 = "valueX1";
+    private static final String KEY_2 = "keyX2";
+    private static final String VALUE_2 = "valueX2";
+    private static final String KEY_3 = "keyX3";
+    private static final String VALUE_3 = "valueX3";
 
     @Rule
     public KafkaJunitRule kafkaRule = new KafkaJunitRule();
@@ -45,7 +47,7 @@ public class KafkaJunitRuleTest {
     @Test
     public void testKafkaServerIsUp() {
         try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
-            producer.send(new ProducerRecord<>(TOPIC, KEY, VALUE));
+            producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_1));
         }
 
         try (KafkaConsumer<String, String> consumer = kafkaRule.createStringConsumer()) {
@@ -56,32 +58,55 @@ public class KafkaJunitRuleTest {
 
             ConsumerRecord<String, String> msg = records.iterator().next();
             assertThat(msg, is(notNullValue()));
-            assertThat(msg.key(), is(equalTo(KEY)));
-            assertThat(msg.value(), is(equalTo(VALUE)));
+            assertThat(msg.key(), is(equalTo(KEY_1)));
+            assertThat(msg.value(), is(equalTo(VALUE_1)));
         }
     }
 
     @Test
-    public void testMessagesCanBeRead() throws TimeoutException {
+    public void testMessagesCanBeRead() throws Exception {
         try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
-            producer.send(new ProducerRecord<>(TOPIC, KEY, VALUE));
+            producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_1));
         }
 
-        List<String> messages = kafkaRule.readStringMessages(TOPIC, 1, 5);
+        List<String> messages = extractValues(kafkaRule.pollStringMessages(TOPIC, 1));
         assertThat(messages, is(notNullValue()));
         assertThat(messages.size(), is(1));
 
         String msg = messages.get(0);
         assertThat(msg, is(notNullValue()));
-        assertThat(msg, is(equalTo(VALUE)));
+        assertThat(msg, is(equalTo(VALUE_1)));
     }
 
-    @Test(expected = TimeoutException.class)
-    public void testTimeout() throws TimeoutException {
+    @Test
+    public void testNoDuplicateMessagesAreRead() throws Exception {
         try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
-            producer.send(new ProducerRecord<>(TOPIC, KEY, VALUE));
+            producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_1));
         }
 
-        kafkaRule.readStringMessages(TOPIC, 2, 1);
+        List<String> firstMessageSet = extractValues(kafkaRule.pollStringMessages(TOPIC, 1));
+        assertThat(firstMessageSet, hasItem(VALUE_1));
+
+        try {
+            List<String> secondMessageSet = extractValues(kafkaRule.pollStringMessages(TOPIC, 1));
+            assertThat(secondMessageSet, not(hasItem(VALUE_1)));
+        } catch (Exception e) {
+            // expected
+        }
+    }
+
+    @Test
+    public void testExactNumberOfMessagesAreRead() throws Exception {
+        try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
+            producer.send(new ProducerRecord<>(TOPIC, KEY_1, VALUE_1));
+            producer.send(new ProducerRecord<>(TOPIC, KEY_2, VALUE_2));
+            producer.send(new ProducerRecord<>(TOPIC, KEY_3, VALUE_3));
+        }
+
+        List<String> firstMessageSet = extractValues(kafkaRule.pollStringMessages(TOPIC, 1));
+        assertThat(firstMessageSet.size(), is(equalTo(1)));
+
+        List<String> secondMessageSet = extractValues(kafkaRule.pollStringMessages(TOPIC, 2));
+        assertThat(secondMessageSet.size(), is(equalTo(2)));
     }
 }
