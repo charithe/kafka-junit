@@ -17,6 +17,7 @@
 package com.github.charithe.kafka;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -45,8 +46,8 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.*;
 
@@ -404,19 +405,20 @@ public class KafkaJunitRule extends ExternalResource {
         @Override
         public List<ConsumerRecord<K, V>> call() throws Exception {
             try {
+                Map<TopicPartition, OffsetAndMetadata> commitBuffer = Maps.newHashMap();
                 List<ConsumerRecord<K, V>> polledMessages = new ArrayList<>(numRecordsToPoll);
-                while (polledMessages.size() < numRecordsToPoll) {
+                while ((polledMessages.size() < numRecordsToPoll) && (!Thread.currentThread().isInterrupted())) {
                     ConsumerRecords<K, V> records = consumer.poll(0);
                     for (ConsumerRecord<K, V> rec : records) {
                         LOGGER.debug("Received message: {} -> {}", rec.key(), rec.value());
                         polledMessages.add(rec);
-                        consumer.commitSync(
-                                Collections.singletonMap(
-                                        new TopicPartition(rec.topic(), rec.partition()),
-                                        new OffsetAndMetadata(rec.offset() + 1)
-                                )
+                        commitBuffer.put(
+                                new TopicPartition(rec.topic(), rec.partition()),
+                                new OffsetAndMetadata(rec.offset() + 1)
                         );
+
                         if (polledMessages.size() == numRecordsToPoll) {
+                            consumer.commitSync(commitBuffer);
                             break;
                         }
                     }
