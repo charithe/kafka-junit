@@ -124,7 +124,7 @@ public class KafkaJunitRuleTest {
 
         ListenableFuture<List<ConsumerRecord<String, String>>> messageFuture = kafkaRule.pollStringMessages(TOPIC, 10);
         try {
-            messageFuture.get(100, TimeUnit.MILLISECONDS);
+            messageFuture.get(500, TimeUnit.MILLISECONDS);
             fail("Future should timeout");
         } catch (TimeoutException toe) {
             messageFuture.cancel(true);
