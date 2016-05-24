@@ -20,7 +20,7 @@
 
     <groupId>com.github.charithe</groupId>
     <artifactId>kafka-junit</artifactId>
-    <version>2.3-SNAPSHOT</version>
+    <version>2.3</version>
 
     <name>kafka-junit</name>
     <description>JUnit rule to spin-up a Kafka broker during tests</description>
@@ -49,7 +49,7 @@
     <scm>
         <developerConnection>scm:git:ssh://git@github.com/charithe/kafka-junit.git</developerConnection>
         <url>https://github.com/charithe/kafka-junit</url>
-      <tag>HEAD</tag>
+      <tag>kafka-junit-2.3</tag>
   </scm>
 
     <distributionManagement>
