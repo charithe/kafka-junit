@@ -8,7 +8,8 @@ Version | Kafka Version
 1.6     | 0.8.2.1       
 1.7     | 0.8.2.2       
 1.8     | 0.9.0.0  
-2.1, 2.2| 0.9.0.1
+2.3     | 0.9.0.1
+2.4     | 0.10.0.0
 
 
 Please note that version 2.x contains some breaking API changes.
