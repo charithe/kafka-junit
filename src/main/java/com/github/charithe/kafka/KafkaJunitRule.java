@@ -21,8 +21,7 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import kafka.server.KafkaConfig;
-import kafka.server.KafkaServerStartable;
+
 import org.apache.curator.test.InstanceSpec;
 import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -49,7 +48,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
+
+import kafka.server.KafkaConfig;
+import kafka.server.KafkaServerStartable;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -214,6 +221,7 @@ public class KafkaJunitRule extends ExternalResource {
         props.put("heartbeat.interval.ms", "100");
         props.put("session.timeout.ms", "200");
         props.put("fetch.max.wait.ms", "200");
+        props.put("metadata.max.age.ms", "100");
 
         return props;
     }
@@ -393,7 +401,7 @@ public class KafkaJunitRule extends ExternalResource {
     }
 
 
-    private static class RecordConsumer<K, V> implements Callable<List<ConsumerRecord<K, V>>> {
+    public static class RecordConsumer<K, V> implements Callable<List<ConsumerRecord<K, V>>> {
         private final int numRecordsToPoll;
         private final KafkaConsumer<K, V> consumer;
 
