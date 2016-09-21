@@ -67,6 +67,7 @@ public class KafkaJunitRule extends ExternalResource {
     private static final int ALLOCATE_RANDOM_PORT = -1;
     private static final String LOCALHOST = "localhost";
     private Properties brokerProperties = null;
+    private Properties consumerProperties = null;
 
     private TestingServer zookeeper;
     private KafkaServerStartable kafkaServer;
@@ -96,6 +97,13 @@ public class KafkaJunitRule extends ExternalResource {
     public KafkaJunitRule(final int kafkaPort, final int zookeeperPort, Properties brokerProperties) {
         this(kafkaPort, zookeeperPort);
         this.brokerProperties = brokerProperties;
+    }
+
+    public KafkaJunitRule(final int kafkaPort, final int zookeeperPort, Properties brokerProperties,
+                          Properties consumerProperties) {
+        this(kafkaPort, zookeeperPort);
+        this.brokerProperties = brokerProperties;
+        this.consumerProperties = consumerProperties;
     }
 
     @Override
@@ -222,6 +230,10 @@ public class KafkaJunitRule extends ExternalResource {
         props.put("session.timeout.ms", "200");
         props.put("fetch.max.wait.ms", "200");
         props.put("metadata.max.age.ms", "100");
+
+        if (consumerProperties != null) {
+            props.putAll(consumerProperties);
+        }
 
         return props;
     }
