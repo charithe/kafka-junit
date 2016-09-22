@@ -69,6 +69,7 @@ public class KafkaJunitRule extends ExternalResource {
     private Properties brokerProperties = null;
 
     private TestingServer zookeeper;
+    private boolean externalZookeeper = false;
     private KafkaServerStartable kafkaServer;
 
     private int zookeeperPort = ALLOCATE_RANDOM_PORT;
@@ -98,9 +99,20 @@ public class KafkaJunitRule extends ExternalResource {
         this.brokerProperties = brokerProperties;
     }
 
+    public KafkaJunitRule(TestingServer zookeeper) {
+        this();
+        this.zookeeper = zookeeper;
+        this.externalZookeeper = true;
+    }
+
     @Override
     protected void before() throws Throwable {
-        if (zookeeperPort == ALLOCATE_RANDOM_PORT) {
+        if(zookeeper != null) {
+            LOGGER.debug("using external zookeeper: {}", zookeeper.getConnectString());
+            this.zookeeperPort = zookeeper.getPort();
+            zookeeper.start();
+        }
+        else if (zookeeperPort == ALLOCATE_RANDOM_PORT) {
             zookeeper = new TestingServer(true);
             zookeeperPort = zookeeper.getPort();
         } else {
@@ -119,7 +131,7 @@ public class KafkaJunitRule extends ExternalResource {
         try {
             shutdownKafka();
 
-            if (zookeeper != null) {
+            if (zookeeper != null && !externalZookeeper) {
                 LOGGER.info("Shutting down Zookeeper");
                 zookeeper.close();
             }
