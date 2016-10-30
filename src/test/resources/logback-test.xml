@@ -31,6 +31,10 @@
         <appender-ref ref="STDERR" />
     </appender>
 
+    <logger name="org.apache.kafka" level="WARN" additivity="false">
+        <appender-ref ref="ASYNC" />
+    </logger>
+
     <logger name="org.apache" level="WARN" additivity="false">
         <appender-ref ref="ASYNC" />
     </logger>

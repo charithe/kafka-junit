@@ -3,6 +3,9 @@ Kafka JUnit Rule [![Build Status](https://travis-ci.org/charithe/kafka-junit.svg
 
 JUnit rule for starting and tearing down a Kafka broker during tests.
 
+**Please note that version 3.x.x drops Java 7 support and contains breaking API changes.** 
+
+
 Version | Kafka Version 
 --------|---------------
 1.6     | 0.8.2.1       
@@ -11,9 +14,8 @@ Version | Kafka Version
 2.3     | 0.9.0.1
 2.4     | 0.10.0.0
 2.5     | 0.10.0.1
+3.0.0   | 0.10.0.1
 
-
-Please note that version 2.x contains some breaking API changes.
 
 Installation
 -------------
@@ -33,7 +35,7 @@ broker between each test invocation.
 
  ```java
  @Rule
- public KafkaJunitRule kafkaRule = new KafkaJunitRule();
+ public KafkaJunitRule kafkaRule = new KafkaJunitRule(EphemeralKafkaBroker.create());
  ```
 
 
@@ -41,7 +43,7 @@ broker between each test invocation.
 
  ```java
  @ClassRule
- public static KafkaJunitRule kafkaRule = new KafkaJunitRule();
+ public static KafkaJunitRule kafkaRule = new KafkaJunitRule(EphemeralKafkaBroker.create());
  ```
 
 
@@ -51,41 +53,23 @@ broker between each test invocation.
 ```java
 @Test
 public void testSomething(){
-    // Use the built-in producer
-    KafkaProducer<String, String> producer = kafkaRule.createStringProducer();
+    // Convenience methods to produce and consume messages
+    kafkaRule.helper().produceStrings("my-test-topic", "a", "b", "c", "d", "e");
+    List<String> result = kafkaRule.helper().consumeStrings("my-test-topic", 5).get();
 
-    // Use the built-in consumer 
-    KafkaConsumer<String, String> consumer = kafkaRule.createStringConsumer();
+    // or use the built-in producers and consumers
+    KafkaProducer<String, String> producer = kafkaRule.helper().createStringProducer();
+
+    KafkaConsumer<String, String> consumer = kafkaRule.helper().createStringConsumer();
 
     // Alternatively, the Zookeeper connection String and the broker port can be retrieved to generate your own config
-    String zkConnStr = kafkaRule.zookeeperConnectionString();
-    int brokerPort = kafkaRule.kafkaBrokerPort();
-
-    ...
+    String zkConnStr = kafkaRule.helper().zookeeperConnectionString();
+    int brokerPort = kafkaRule.helper().kafkaPort();
 }
 ```
 
+`EphemeralKafkaBroker` contains the core logic used by the JUnit rule and can be used independently. 
 
+`KafkaHelper` contains a bunch of convenience methods to work with the `EphemeralKafkaBroker` 
 
-There are also some helper methods available to read messages. 
-
-```java
-@Test
-public void testMessagesCanBeRead() throws Exception {
-    // write a message 
-    try (KafkaProducer<String, String> producer = kafkaRule.createStringProducer()) {
-        producer.send(new ProducerRecord<>(TOPIC, KEY, VALUE));
-    }
-
-    // attempt to read a single message with a 5 second timeout
-    List<ConsumerRecord<String, String>> messages = kafkaRule.pollStringMessages(TOPIC, 1).get(5, TimeUnit.SECONDS);
-    assertThat(messages, is(notNullValue()));
-    assertThat(messages.size(), is(1));
-
-    ConsumerRecord<String, String> msg = messages.get(0);
-    assertThat(msg, is(notNullValue()));
-    assertThat(msg.value(), is(equalTo(VALUE)));
-}
-```
-
-Refer to unit tests for more examples.
+Refer to Javadocs and unit tests for more usage examples.
