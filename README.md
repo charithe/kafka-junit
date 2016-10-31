@@ -27,6 +27,11 @@ Releases are available on Maven Central.
 
 Snapshot versions containing builds from the latest `master` are available in the Sonatype snapshots repo.
 
+Javadocs
+--------
+
+<http://charithe.github.io/kafka-junit/>
+
 Usage
 ------
 
@@ -72,4 +77,4 @@ public void testSomething(){
 
 `KafkaHelper` contains a bunch of convenience methods to work with the `EphemeralKafkaBroker` 
 
-Refer to Javadocs and unit tests for more usage examples.
+Refer to [Javadocs](http://charithe.github.io/kafka-junit/) and unit tests for more usage examples.
