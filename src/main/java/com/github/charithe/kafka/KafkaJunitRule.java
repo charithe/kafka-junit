@@ -40,4 +40,8 @@ public class KafkaJunitRule extends ExternalResource {
     public KafkaHelper helper() {
         return KafkaHelper.createFor(broker);
     }
+
+    public static KafkaJunitRule create() {
+        return new KafkaJunitRule(EphemeralKafkaBroker.create());
+    }
 }
