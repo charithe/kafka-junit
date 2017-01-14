@@ -16,16 +16,33 @@
 
 package com.github.charithe.kafka;
 
+import com.google.common.util.concurrent.Futures;
 import org.junit.rules.ExternalResource;
+
+import java.util.concurrent.CompletableFuture;
+
+import static java.util.Objects.requireNonNull;
 
 public class KafkaJunitRule extends ExternalResource {
     private final EphemeralKafkaBroker broker;
+    private final StartupMode mode;
 
-    public KafkaJunitRule(EphemeralKafkaBroker broker) {this.broker = broker;}
+    public KafkaJunitRule(EphemeralKafkaBroker broker) {
+        this(broker, StartupMode.DEFAULT);
+    }
+
+    public KafkaJunitRule(EphemeralKafkaBroker broker, StartupMode mode) {
+        this.broker = requireNonNull(broker);
+        this.mode = requireNonNull(mode);
+    }
 
     @Override
     protected void before() throws Throwable {
-        broker.start();
+        final CompletableFuture<Void> startFuture = broker.start();
+
+        if (mode == StartupMode.WAIT_FOR_STARTUP) {
+            Futures.getUnchecked(startFuture);
+        }
     }
 
     @Override
@@ -39,5 +56,29 @@ public class KafkaJunitRule extends ExternalResource {
      */
     public KafkaHelper helper() {
         return KafkaHelper.createFor(broker);
+    }
+
+    /**
+     * @return A new instance of {@link KafkaJunitRule} that will wait for the broker to finish starting before
+     *         executing tests.
+     */
+    public KafkaJunitRule waitForStartup() {
+        return new KafkaJunitRule(broker, StartupMode.WAIT_FOR_STARTUP);
+    }
+
+    /**
+     * @return A new instance of {@link KafkaJunitRule} that will NOT wait for the broker to finish starting before
+     *         executing tests
+     */
+    public KafkaJunitRule dontWaitForStartup() {
+        return new KafkaJunitRule(broker, StartupMode.DEFAULT);
+    }
+
+    public static KafkaJunitRule create() {
+        return new KafkaJunitRule(EphemeralKafkaBroker.create());
+    }
+
+    private enum StartupMode {
+        WAIT_FOR_STARTUP, DEFAULT
     }
 }

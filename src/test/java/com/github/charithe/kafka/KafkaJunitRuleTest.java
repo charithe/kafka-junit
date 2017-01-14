@@ -18,6 +18,12 @@ package com.github.charithe.kafka;
 
 import com.google.common.collect.Lists;
 
+import kafka.admin.AdminUtils;
+import kafka.admin.RackAwareMode;
+import kafka.utils.ZKStringSerializer$;
+import kafka.utils.ZkUtils;
+import org.I0Itec.zkclient.ZkClient;
+import org.I0Itec.zkclient.ZkConnection;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -25,34 +31,78 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+
+import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
 
+@RunWith(Enclosed.class)
 public class KafkaJunitRuleTest {
     private static final String TOPIC = "topicX";
 
-    @Rule
-    public KafkaJunitRule kafkaRule = new KafkaJunitRule(EphemeralKafkaBroker.create());
+    public static class BaseTest {
+        @Rule
+        public KafkaJunitRule kafkaRule = new KafkaJunitRule(EphemeralKafkaBroker.create());
 
-    @Test
-    public void testKafkaServerIsUp() {
-        try (KafkaProducer<String, String> producer = kafkaRule.helper().createStringProducer()) {
-            producer.send(new ProducerRecord<>(TOPIC, "keyA", "valueA"));
+        @Test
+        public void testKafkaServerIsUp() {
+            try (KafkaProducer<String, String> producer = kafkaRule.helper().createStringProducer()) {
+                producer.send(new ProducerRecord<>(TOPIC, "keyA", "valueA"));
+            }
+
+            try (KafkaConsumer<String, String> consumer = kafkaRule.helper().createStringConsumer()) {
+                consumer.subscribe(Lists.newArrayList(TOPIC));
+                ConsumerRecords<String, String> records = consumer.poll(500);
+                assertThat(records, is(notNullValue()));
+                assertThat(records.isEmpty(), is(false));
+
+                ConsumerRecord<String, String> msg = records.iterator().next();
+                assertThat(msg, is(notNullValue()));
+                assertThat(msg.key(), is(equalTo("keyA")));
+                assertThat(msg.value(), is(equalTo("valueA")));
+            }
         }
+    }
 
-        try (KafkaConsumer<String, String> consumer = kafkaRule.helper().createStringConsumer()) {
-            consumer.subscribe(Lists.newArrayList(TOPIC));
-            ConsumerRecords<String, String> records = consumer.poll(500);
-            assertThat(records, is(notNullValue()));
-            assertThat(records.isEmpty(), is(false));
+    public static class WaitForStartup {
+        @Rule
+        public KafkaJunitRule kafkaRule = KafkaJunitRule.create()
+            .waitForStartup();
 
-            ConsumerRecord<String, String> msg = records.iterator().next();
-            assertThat(msg, is(notNullValue()));
-            assertThat(msg.key(), is(equalTo("keyA")));
-            assertThat(msg.value(), is(equalTo("valueA")));
+        @Test
+        public void testKafkaServerIsUp() {
+            // Setup Zookeeper client
+            final String zkConnectionString = kafkaRule.helper().zookeeperConnectionString();
+            final ZkClient zkClient = new ZkClient(
+                zkConnectionString, 1000, 8000, ZKStringSerializer$.MODULE$
+            );
+            final ZkConnection zkConnection = new ZkConnection(zkConnectionString);
+            final ZkUtils zkUtils = new ZkUtils(zkClient, zkConnection, false);
+
+            // Create topic
+            AdminUtils.createTopic(zkUtils, TOPIC, 1, 1, new Properties(), new RackAwareMode.Disabled$());
+
+            // Produce/consume test
+            try (KafkaProducer<String, String> producer = kafkaRule.helper().createStringProducer()) {
+                producer.send(new ProducerRecord<>(TOPIC, "keyA", "valueA"));
+            }
+
+            try (KafkaConsumer<String, String> consumer = kafkaRule.helper().createStringConsumer()) {
+                consumer.subscribe(Lists.newArrayList(TOPIC));
+                ConsumerRecords<String, String> records = consumer.poll(500);
+                assertThat(records, is(notNullValue()));
+                assertThat(records.isEmpty(), is(false));
+
+                ConsumerRecord<String, String> msg = records.iterator().next();
+                assertThat(msg, is(notNullValue()));
+                assertThat(msg.key(), is(equalTo("keyA")));
+                assertThat(msg.value(), is(equalTo("valueA")));
+            }
         }
     }
 }
