@@ -17,7 +17,7 @@
 package com.github.charithe.kafka;
 
 import com.google.common.collect.Lists;
-
+import java.util.Properties;
 import kafka.admin.AdminUtils;
 import kafka.admin.RackAwareMode;
 import kafka.utils.ZKStringSerializer$;
@@ -34,12 +34,7 @@ import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 
-import java.util.Properties;
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(Enclosed.class)
 public class KafkaJunitRuleTest {
@@ -57,14 +52,14 @@ public class KafkaJunitRuleTest {
 
             try (KafkaConsumer<String, String> consumer = kafkaRule.helper().createStringConsumer()) {
                 consumer.subscribe(Lists.newArrayList(TOPIC));
-                ConsumerRecords<String, String> records = consumer.poll(500);
-                assertThat(records, is(notNullValue()));
-                assertThat(records.isEmpty(), is(false));
+                ConsumerRecords<String, String> records = consumer.poll(10000);
+                assertThat(records).isNotNull();
+                assertThat(records.isEmpty()).isFalse();
 
                 ConsumerRecord<String, String> msg = records.iterator().next();
-                assertThat(msg, is(notNullValue()));
-                assertThat(msg.key(), is(equalTo("keyA")));
-                assertThat(msg.value(), is(equalTo("valueA")));
+                assertThat(msg).isNotNull();
+                assertThat(msg.key()).isEqualTo("keyA");
+                assertThat(msg.value()).isEqualTo("valueA");
             }
         }
     }
@@ -85,7 +80,7 @@ public class KafkaJunitRuleTest {
             final ZkUtils zkUtils = new ZkUtils(zkClient, zkConnection, false);
 
             // Create topic
-            AdminUtils.createTopic(zkUtils, TOPIC, 1, 1, new Properties(), new RackAwareMode.Disabled$());
+            AdminUtils.createTopic(zkUtils, TOPIC, 1, 1, new Properties(), null);
 
             // Produce/consume test
             try (KafkaProducer<String, String> producer = kafkaRule.helper().createStringProducer()) {
@@ -94,14 +89,14 @@ public class KafkaJunitRuleTest {
 
             try (KafkaConsumer<String, String> consumer = kafkaRule.helper().createStringConsumer()) {
                 consumer.subscribe(Lists.newArrayList(TOPIC));
-                ConsumerRecords<String, String> records = consumer.poll(500);
-                assertThat(records, is(notNullValue()));
-                assertThat(records.isEmpty(), is(false));
+                ConsumerRecords<String, String> records = consumer.poll(10000);
+                assertThat(records).isNotNull();
+                assertThat(records.isEmpty()).isFalse();
 
                 ConsumerRecord<String, String> msg = records.iterator().next();
-                assertThat(msg, is(notNullValue()));
-                assertThat(msg.key(), is(equalTo("keyA")));
-                assertThat(msg.value(), is(equalTo("valueA")));
+                assertThat(msg).isNotNull();
+                assertThat(msg.key()).isEqualTo("keyA");
+                assertThat(msg.value()).isEqualTo("valueA");
             }
         }
     }

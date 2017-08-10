@@ -17,7 +17,8 @@
 package com.github.charithe.kafka;
 
 import com.google.common.collect.Lists;
-
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -27,16 +28,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class KafkaHelperTest {
 
@@ -66,10 +58,10 @@ public class KafkaHelperTest {
 
         try (KafkaConsumer<String, String> consumer = helper.createStringConsumer()) {
             consumer.subscribe(Lists.newArrayList("test"));
-            ConsumerRecords<String, String> records = consumer.poll(500);
+            ConsumerRecords<String, String> records = consumer.poll(10000);
             ConsumerRecord<String, String> cr = records.records("test").iterator().next();
-            assertThat(cr.key(), is(equalTo("k")));
-            assertThat(cr.value(), is(equalTo("v")));
+            assertThat(cr.key()).isEqualTo("k");
+            assertThat(cr.value()).isEqualTo("v");
         }
     }
 
@@ -78,25 +70,25 @@ public class KafkaHelperTest {
         helper.produceStrings("my-test-topic", "a", "b", "c", "d", "e");
         List<String> result = helper.consumeStrings("my-test-topic", 5).get();
 
-        assertThat(result, hasSize(5));
-        assertThat(result, containsInAnyOrder("a", "b", "c", "d", "e"));
+        assertThat(result).hasSize(5);
+        assertThat(result).containsExactlyInAnyOrder("a", "b", "c", "d", "e");
     }
 
     @Test
     public void testExactNumberOfMessagesAreConsumed() throws Exception {
         helper.produceStrings("topic-a", "valueA", "valueB", "valueC");
         List<String> messages = helper.consumeStrings("topic-a", 2).get();
-        assertThat(messages, hasSize(2));
+        assertThat(messages).hasSize(2);
     }
 
     @Test
     public void testNoDuplicateMessagesAreRead() throws Exception {
         helper.produceStrings("topic-b", "valueA");
         List<String> firstMessageSet = helper.consumeStrings("topic-b", 1).get();
-        assertThat(firstMessageSet, hasItem("valueA"));
+        assertThat(firstMessageSet).contains("valueA");
 
         helper.produceStrings("topic-b", "valueB", "valueC");
         List<String> secondMessageSet = helper.consumeStrings("topic-b", 1).get();
-        assertThat(secondMessageSet, not(hasItem("valueA")));
+        assertThat(secondMessageSet).doesNotContain("valueA");
     }
 }

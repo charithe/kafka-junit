@@ -17,7 +17,15 @@
 package com.github.charithe.kafka;
 
 import com.google.common.collect.Lists;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
+import kafka.admin.AdminUtils;
 import org.apache.curator.test.InstanceSpec;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -29,19 +37,11 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.Test;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 public class EphemeralKafkaBrokerTest {
+
+    public static final String TEST_TOPIC = "test-topic";
 
     @Test
     public void testStartAndStop() throws Exception {
@@ -55,22 +55,22 @@ public class EphemeralKafkaBrokerTest {
             //Ignore
         }
 
-        assertThat(broker.isRunning(), is(true));
-        assertThat(broker.getKafkaPort().get(), is(equalTo(kafkaPort)));
-        assertThat(broker.getZookeeperPort().get(), is(equalTo(zkPort)));
-        assertThat(broker.getBrokerList().isPresent(), is(true));
-        assertThat(broker.getZookeeperConnectString().isPresent(), is(true));
-        assertThat(broker.getLogDir().isPresent(), is(true));
+        assertThat(broker.isRunning()).isTrue();
+        assertThat(broker.getKafkaPort().get()).isEqualTo(kafkaPort);
+        assertThat(broker.getZookeeperPort().get()).isEqualTo(zkPort);
+        assertThat(broker.getBrokerList().isPresent()).isTrue();
+        assertThat(broker.getZookeeperConnectString().isPresent()).isTrue();
+        assertThat(broker.getLogDir().isPresent()).isTrue();
 
         Path logDir = Paths.get(broker.getLogDir().get());
-        assertThat(Files.exists(logDir), is(true));
+        assertThat(Files.exists(logDir)).isTrue();
 
         broker.stop();
-        assertThat(res.isDone(), is(true));
-        assertThat(broker.isRunning(), is(false));
-        assertThat(broker.getBrokerList().isPresent(), is(false));
-        assertThat(broker.getZookeeperConnectString().isPresent(), is(false));
-        assertThat(Files.exists(logDir), is(false));
+        assertThat(res.isDone()).isTrue();
+        assertThat(broker.isRunning()).isFalse();
+        assertThat(broker.getBrokerList().isPresent()).isFalse();
+        assertThat(broker.getZookeeperConnectString().isPresent()).isFalse();
+        assertThat(Files.exists(logDir)).isFalse();
     }
 
     @Test
@@ -83,30 +83,31 @@ public class EphemeralKafkaBrokerTest {
             //Ignore
         }
 
-        assertThat(broker.isRunning(), is(true));
+        assertThat(broker.isRunning()).isTrue();
 
         try (KafkaProducer<String, String> producer =
                      broker.createProducer(new StringSerializer(), new StringSerializer(), null)) {
             Future<RecordMetadata> result =
-                    producer.send(new ProducerRecord<>("test-topic", "key1", "value1"));
+                    producer.send(new ProducerRecord<>(TEST_TOPIC, "key1", "value1"));
 
             RecordMetadata metadata = result.get(500L, TimeUnit.MILLISECONDS);
-            assertThat(metadata, is(notNullValue()));
-            assertThat(metadata.topic(), is(equalTo("test-topic")));
+            assertThat(metadata).isNotNull();
+            assertThat(metadata.topic()).isEqualTo(TEST_TOPIC);
         }
 
         try (KafkaConsumer<String, String> consumer =
                      broker.createConsumer(new StringDeserializer(), new StringDeserializer(), null)) {
 
-            consumer.subscribe(Lists.newArrayList("test-topic"));
-            ConsumerRecords<String, String> records = consumer.poll(500);
-            assertThat(records, is(notNullValue()));
-            assertThat(records.isEmpty(), is(false));
+            consumer.subscribe(Lists.newArrayList(TEST_TOPIC));
+            ConsumerRecords<String, String> records;
+            records = consumer.poll(10000);
+            assertThat(records).isNotNull();
+            assertThat(records.isEmpty()).isFalse();
 
             ConsumerRecord<String, String> msg = records.iterator().next();
-            assertThat(msg, is(notNullValue()));
-            assertThat(msg.key(), is(equalTo("key1")));
-            assertThat(msg.value(), is(equalTo("value1")));
+            assertThat(msg).isNotNull();
+            assertThat(msg.key()).isEqualTo("key1");
+            assertThat(msg.value()).isEqualTo("value1");
         }
 
         broker.stop();
