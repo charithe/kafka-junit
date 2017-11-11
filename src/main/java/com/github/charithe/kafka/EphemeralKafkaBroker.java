@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,6 +37,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServerStartable;
@@ -50,6 +52,7 @@ public class EphemeralKafkaBroker {
     private Properties overrideBrokerProperties;
 
     private TestingServer zookeeper;
+    private boolean managedZk = false;
     private KafkaServerStartable kafkaServer;
     private Path kafkaLogDir;
 
@@ -104,6 +107,13 @@ public class EphemeralKafkaBroker {
         this.overrideBrokerProperties = overrideBrokerProperties;
     }
 
+    EphemeralKafkaBroker(TestingServer zookeeper, int kafkaPort, Properties overrideBrokerProperties) {
+        this.zookeeper = zookeeper;
+        this.kafkaPort = kafkaPort;
+        this.overrideBrokerProperties = overrideBrokerProperties;
+        this.managedZk = true;
+    }
+
     /**
      * Start the Kafka broker
      */
@@ -120,11 +130,13 @@ public class EphemeralKafkaBroker {
     }
 
     private CompletableFuture<Void> startBroker() throws Exception {
-        if (zookeeperPort == ALLOCATE_RANDOM_PORT) {
-            zookeeper = new TestingServer(true);
-            zookeeperPort = zookeeper.getPort();
-        } else {
-            zookeeper = new TestingServer(zookeeperPort, true);
+        if(!this.managedZk) {
+            if (zookeeperPort == ALLOCATE_RANDOM_PORT) {
+                zookeeper = new TestingServer(true);
+                zookeeperPort = zookeeper.getPort();
+            } else {
+                zookeeper = new TestingServer(zookeeperPort, true);
+            }
         }
 
         kafkaPort = kafkaPort == ALLOCATE_RANDOM_PORT ? InstanceSpec.getRandomPort() : kafkaPort;
@@ -134,13 +146,18 @@ public class EphemeralKafkaBroker {
         LOGGER.info("Starting Kafka server with config: {}", kafkaConfig.props());
         kafkaServer = new KafkaServerStartable(kafkaConfig);
         brokerStarted = true;
+        final Integer brokerId = kafkaServer.serverConfig().getInt(KafkaConfig.BrokerIdProp());
+        if(brokerId != null) {
+            /* Avoid warning for missing meta.properties */
+            Files.write(kafkaLogDir.resolve("meta.properties"), ("version=0\nbroker.id=" + brokerId).getBytes(StandardCharsets.UTF_8));
+        }
         return CompletableFuture.runAsync(() -> kafkaServer.startup());
     }
 
     /**
      * Stop the Kafka broker
      */
-    public void stop() {
+    public void stop() throws ExecutionException, InterruptedException {
         if (brokerStarted) {
             synchronized (this) {
                 if (brokerStarted) {
@@ -151,37 +168,45 @@ public class EphemeralKafkaBroker {
         }
     }
 
-    private void stopBroker() {
-        try {
-            if (kafkaServer != null) {
-                LOGGER.info("Shutting down Kafka Server");
-                kafkaServer.shutdown();
-            }
+    private void stopBroker() throws ExecutionException, InterruptedException {
+        stopBrokerAsync().get();
+    }
 
-            if (zookeeper != null) {
-                LOGGER.info("Shutting down Zookeeper");
-                zookeeper.close();
-            }
+    CompletableFuture<Void> stopBrokerAsync() {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                if (kafkaServer != null) {
+                    LOGGER.info("Shutting down Kafka Server");
+                    kafkaServer.shutdown();
+                    kafkaServer.awaitShutdown();
+                }
 
-            if (Files.exists(kafkaLogDir)) {
-                LOGGER.info("Deleting the log dir:  {}", kafkaLogDir);
-                Files.walkFileTree(kafkaLogDir, new SimpleFileVisitor<Path>() {
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        Files.deleteIfExists(file);
-                        return FileVisitResult.CONTINUE;
-                    }
+                if (zookeeper != null && !this.managedZk) {
+                    LOGGER.info("Shutting down Zookeeper");
+                    zookeeper.close();
+                }
 
-                    @Override
-                    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                        Files.deleteIfExists(dir);
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
+                if (Files.exists(kafkaLogDir)) {
+                    LOGGER.info("Deleting the log dir:  {}", kafkaLogDir);
+                    Files.walkFileTree(kafkaLogDir, new SimpleFileVisitor<Path>() {
+                        @Override
+                        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                            Files.deleteIfExists(file);
+                            return FileVisitResult.CONTINUE;
+                        }
+
+                        @Override
+                        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                            Files.deleteIfExists(dir);
+                            return FileVisitResult.CONTINUE;
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                LOGGER.error("Failed to clean-up Kafka", e);
             }
-        } catch (Exception e) {
-            LOGGER.error("Failed to clean-up Kafka", e);
-        }
+        });
+
     }
 
     private KafkaConfig buildKafkaConfig(String zookeeperQuorum) throws IOException {

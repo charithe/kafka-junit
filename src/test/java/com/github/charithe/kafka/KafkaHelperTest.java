@@ -43,7 +43,7 @@ public class KafkaHelperTest {
     }
 
     @AfterClass
-    public static void teardown() {
+    public static void teardown() throws ExecutionException, InterruptedException {
         broker.stop();
         broker = null;
         helper = null;
