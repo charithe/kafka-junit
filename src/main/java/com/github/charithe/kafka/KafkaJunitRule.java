@@ -20,6 +20,7 @@ import com.google.common.util.concurrent.Futures;
 import org.junit.rules.ExternalResource;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static java.util.Objects.requireNonNull;
 
@@ -47,7 +48,11 @@ public class KafkaJunitRule extends ExternalResource {
 
     @Override
     protected void after() {
-        broker.stop();
+        try {
+            broker.stop();
+        } catch (ExecutionException | InterruptedException e) {
+            throw new AssertionError(e);
+        }
     }
 
     /**

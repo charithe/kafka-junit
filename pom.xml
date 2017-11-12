@@ -46,7 +46,7 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <kafka.version>0.11.0.1</kafka.version>
+        <kafka.version>1.0.0</kafka.version>
     </properties>
 
     <scm>
@@ -101,7 +101,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>23.0</version>
+            <version>23.3-jre</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
