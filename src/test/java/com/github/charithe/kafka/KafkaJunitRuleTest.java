@@ -19,7 +19,6 @@ package com.github.charithe.kafka;
 import com.google.common.collect.Lists;
 import java.util.Properties;
 import kafka.admin.AdminUtils;
-import kafka.admin.RackAwareMode;
 import kafka.utils.ZKStringSerializer$;
 import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;

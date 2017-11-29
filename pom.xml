@@ -45,8 +45,13 @@
     </prerequisites>
 
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
         <kafka.version>1.0.0</kafka.version>
+        <junit.version>4.12</junit.version>
+        <junit.jupiter.version>5.1.0-M1</junit.jupiter.version>
+        <junit.vintage.version>5.1.0-M1</junit.vintage.version>
+        <junit.platform.version>1.1.0-M1</junit.platform.version>
     </properties>
 
     <scm>
@@ -106,10 +111,15 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <version>${junit.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.jupiter.version}</version>
         </dependency>
 
-        <!-- Test dependencies -->
+        <!-- TEST DEPENDENCIES -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
@@ -121,6 +131,33 @@
             <artifactId>assertj-core</artifactId>
             <version>3.8.0</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Only required to run tests in an IDE that bundles an older version -->
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <version>${junit.platform.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Only required to run tests in an IDE that bundles an older version -->
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <version>${junit.vintage.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- To avoid compiler warnings about @API annotations in JUnit code -->
+            <groupId>org.apiguardian</groupId>
+            <artifactId>apiguardian-api</artifactId>
+            <version>1.0.0</version>
+            <scope>provided</scope>
         </dependency>
 
     </dependencies>
@@ -226,6 +263,17 @@
                     <pubScmUrl>scm:git:ssh://git@github.com/charithe/kafka-junit.git</pubScmUrl>
                     <scmBranch>gh-pages</scmBranch>
                 </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.19.1</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.junit.platform</groupId>
+                        <artifactId>junit-platform-surefire-provider</artifactId>
+                        <version>${junit.platform.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>
