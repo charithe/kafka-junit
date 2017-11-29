@@ -1,7 +1,10 @@
-Kafka JUnit Rule [![Build Status](https://travis-ci.org/charithe/kafka-junit.svg?branch=master)](https://travis-ci.org/charithe/kafka-junit) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.charithe/kafka-junit/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.charithe/kafka-junit)
-=================
+Kafka JUnit [![Build Status](https://travis-ci.org/charithe/kafka-junit.svg?branch=master)](https://travis-ci.org/charithe/kafka-junit) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.charithe/kafka-junit/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.charithe/kafka-junit)
+===========
 
-JUnit rule for starting and tearing down a Kafka broker during tests.
+Kafka Junit provides a JUnit rule for starting and tearing down a Kafka broker during tests.
+
+It also provides a JUnit 5 Extension to do this, as rules are no longer natively supported in JUnit 5.
+
 
 **Please note that version 3.x.x drops Java 7 support and contains breaking API changes.** 
 
@@ -82,5 +85,37 @@ public void testSomething(){
 `EphemeralKafkaBroker` contains the core logic used by the JUnit rule and can be used independently. 
 
 `KafkaHelper` contains a bunch of convenience methods to work with the `EphemeralKafkaBroker` 
+
+#### JUnit 5 Usage
+
+JUnit 5 does not have support for Rules, but instead uses the new [JUnit 5 Extension Model](http://junit.org/junit5/docs/current/user-guide/#extensions).
+
+So if you are using JUnit 5 you can use `KafkaJunitExtension` which provides a kafka broker that is started and stopped for each test.
+
+The extension is configured using the optional class annotation `@KafkaJunitExtensionConfig` and provides
+dependency injection for constructors and methods for the classes `KafkaHelper` and `EphemeralKafkaBroker`
+
+```java
+@ExtendWith(KafkaJunitExtension.class)
+@KafkaJunitExtensionConfig(startupMode = StartupMode.WAIT_FOR_STARTUP)
+class MyTestClass {
+    
+    @Test
+    void testSomething(KafkaHelper kafkaHelper){
+        // Convenience methods to produce and consume messages
+        kafkaHelper.produceStrings("my-test-topic", "a", "b", "c", "d", "e");
+        List<String> result = kafkaHelper.consumeStrings("my-test-topic", 5).get();
+    
+        // or use the built-in producers and consumers
+        KafkaProducer<String, String> producer = kafkaHelper.createStringProducer();
+    
+        KafkaConsumer<String, String> consumer = kafkaHelper.createStringConsumer();
+    
+        // Alternatively, the Zookeeper connection String and the broker port can be retrieved to generate your own config
+        String zkConnStr = kafkaHelper.zookeeperConnectionString();
+        int brokerPort = kafkaHelper.kafkaPort();
+    }
+}
+```
 
 Refer to [Javadocs](http://charithe.github.io/kafka-junit/) and unit tests for more usage examples.
