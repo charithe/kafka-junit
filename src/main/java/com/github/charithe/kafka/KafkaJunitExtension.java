@@ -12,31 +12,31 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 /**
- * <p>{@code KafkaJunitExtension} provides a kafka broker that is started and stopped for each test</p>
- * <p>
- * It is configured by the optional annotation @{@link KafkaJunitExtensionConfig} and provides
- * dependency injection for constructors and methods for the classes {@link KafkaHelper} and {@link EphemeralKafkaBroker}
- * </p>
- * <br>
- * <b>Usage:</b>
- * <pre>
- * {@code @ExtendWith(KafkaJunitExtension.class)
- *  @literal @KafkaJunitExtensionConfig(startupMode = StartupMode.WAIT_FOR_STARTUP)
- *   class MyTestClass {
+ * {@code KafkaJunitExtension} provides a kafka broker that is started and stopped for each test. It is configured by
+ * the optional annotation @{@link KafkaJunitExtensionConfig} and provides dependency injection for constructors and
+ * methods for the classes {@link KafkaHelper} and {@link EphemeralKafkaBroker}
  *
- *      @literal @BeforeEach
+ * Usage:
+ * <pre>
+ *     <code>
+ * {@literal @}ExtendWith(KafkaJunitExtension.class)
+ * {@literal @}KafkaJunitExtensionConfig(startupMode = StartupMode.WAIT_FOR_STARTUP)
+ * class MyTestClass {
+ *      {@literal @}BeforeEach
  *       void setUp(KafkaHelper kafkaHelper, EphemeralKafkaBroker broker) {
  *
  *       }
- *  }
  * }
+ *     </code>
  * </pre>
  */
 @KafkaJunitExtensionConfig
-public class KafkaJunitExtension implements BeforeAllCallback, AfterEachCallback, BeforeEachCallback, ParameterResolver {
+public class KafkaJunitExtension
+    implements BeforeAllCallback, AfterEachCallback, BeforeEachCallback, ParameterResolver {
 
     private static final ExtensionContext.Namespace KAFKA_JUNIT = ExtensionContext.Namespace.create("kafka-junit");
-    private static final KafkaJunitExtensionConfig DEFAULT_CONFIG = KafkaJunitExtension.class.getAnnotation(KafkaJunitExtensionConfig.class);
+    private static final KafkaJunitExtensionConfig DEFAULT_CONFIG =
+        KafkaJunitExtension.class.getAnnotation(KafkaJunitExtensionConfig.class);
 
     @Override
     public void beforeAll(ExtensionContext extensionContext) {
@@ -84,7 +84,9 @@ public class KafkaJunitExtension implements BeforeAllCallback, AfterEachCallback
 
     @Override
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
-        return parameterContext.getParameter().getType().equals(KafkaHelper.class) || parameterContext.getParameter().getType().equals(EphemeralKafkaBroker.class);
+        return parameterContext.getParameter().getType().equals(KafkaHelper.class) || parameterContext.getParameter()
+            .getType()
+            .equals(EphemeralKafkaBroker.class);
     }
 
     @Override
@@ -92,5 +94,4 @@ public class KafkaJunitExtension implements BeforeAllCallback, AfterEachCallback
         Class<?> parameterType = parameterContext.getParameter().getType();
         return extensionContext.getStore(KAFKA_JUNIT).get(parameterType, parameterType);
     }
-
 }
