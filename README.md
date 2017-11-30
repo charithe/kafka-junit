@@ -1,9 +1,7 @@
 Kafka JUnit [![Build Status](https://travis-ci.org/charithe/kafka-junit.svg?branch=master)](https://travis-ci.org/charithe/kafka-junit) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.charithe/kafka-junit/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.charithe/kafka-junit)
 ===========
 
-Kafka Junit provides a JUnit rule for starting and tearing down a Kafka broker during tests.
-
-It also provides a JUnit 5 Extension to do this, as rules are no longer natively supported in JUnit 5.
+Kafka Junit provides helpers for starting and tearing down a Kafka broker during tests.
 
 
 **Please note that version 3.x.x drops Java 7 support and contains breaking API changes.** 
@@ -25,6 +23,8 @@ Version | Kafka Version
 3.1.0   | 0.11.0.0
 3.1.1   | 0.11.0.1
 4.0.0   | 1.0.0
+4.1.0   | 1.0.0 (JUnit 5 support)
+
 
 Installation
 -------------
@@ -43,6 +43,8 @@ Javadocs
 
 Usage
 ------
+
+### JUnit 4
 
 Create an instance of the rule in your test class and annotate it with `@Rule`. This will start and stop the
 broker between each test invocation.
@@ -86,7 +88,7 @@ public void testSomething(){
 
 `KafkaHelper` contains a bunch of convenience methods to work with the `EphemeralKafkaBroker` 
 
-#### JUnit 5 Usage
+### JUnit 5
 
 JUnit 5 does not have support for Rules, but instead uses the new [JUnit 5 Extension Model](http://junit.org/junit5/docs/current/user-guide/#extensions).
 
