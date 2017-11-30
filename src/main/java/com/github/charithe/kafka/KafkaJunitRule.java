@@ -83,7 +83,4 @@ public class KafkaJunitRule extends ExternalResource {
         return new KafkaJunitRule(EphemeralKafkaBroker.create());
     }
 
-    private enum StartupMode {
-        WAIT_FOR_STARTUP, DEFAULT
-    }
 }
