@@ -103,10 +103,11 @@ dependency injection for constructors and methods for the classes `KafkaHelper` 
 class MyTestClass {
     
     @Test
-    void testSomething(KafkaHelper kafkaHelper){
+    void testSomething(KafkaHelper kafkaHelper) throws ExecutionException, InterruptedException {
         // Convenience methods to produce and consume messages
         kafkaHelper.produceStrings("my-test-topic", "a", "b", "c", "d", "e");
         List<String> result = kafkaHelper.consumeStrings("my-test-topic", 5).get();
+        assertThat(result).containsExactlyInAnyOrder("a", "b", "c", "d", "e");
     
         // or use the built-in producers and consumers
         KafkaProducer<String, String> producer = kafkaHelper.createStringProducer();
