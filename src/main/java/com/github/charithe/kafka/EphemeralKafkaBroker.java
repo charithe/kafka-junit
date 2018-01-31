@@ -17,7 +17,8 @@
 package com.github.charithe.kafka;
 
 import com.google.common.collect.Maps;
-
+import kafka.server.KafkaConfig;
+import kafka.server.KafkaServerStartable;
 import org.apache.curator.test.InstanceSpec;
 import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -38,9 +39,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
-import kafka.server.KafkaConfig;
-import kafka.server.KafkaServerStartable;
 
 public class EphemeralKafkaBroker {
     private static final Logger LOGGER = LoggerFactory.getLogger(EphemeralKafkaBroker.class);
@@ -225,6 +223,10 @@ public class EphemeralKafkaBroker {
         props.put("default.replication.factor", "1");
         props.put("num.partitions", "1");
         props.put("group.min.session.timeout.ms", "100");
+        props.put("transaction.state.log.replication.factor", "1");
+        props.put("transaction.state.log.min.isr", "1");
+        props.put("transaction.state.log.num.partitions", "1");
+        props.put("transaction.timeout.ms", "500");
 
         if (overrideBrokerProperties != null) {
             props.putAll(overrideBrokerProperties);

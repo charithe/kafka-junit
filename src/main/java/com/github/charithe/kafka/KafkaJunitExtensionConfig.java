@@ -16,5 +16,4 @@ public @interface KafkaJunitExtensionConfig {
     int zooKeeperPort() default ALLOCATE_RANDOM_PORT;
 
     StartupMode startupMode() default StartupMode.DEFAULT;
-
 }
