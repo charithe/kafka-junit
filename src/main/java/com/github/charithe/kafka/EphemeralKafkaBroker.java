@@ -144,7 +144,7 @@ public class EphemeralKafkaBroker {
         LOGGER.info("Starting Kafka server with config: {}", kafkaConfig.props());
         kafkaServer = new KafkaServerStartable(kafkaConfig);
         brokerStarted = true;
-        final Integer brokerId = kafkaServer.serverConfig().getInt(KafkaConfig.BrokerIdProp());
+        final Integer brokerId = kafkaServer.staticServerConfig().getInt(KafkaConfig.BrokerIdProp());
         if(brokerId != null) {
             /* Avoid warning for missing meta.properties */
             Files.write(kafkaLogDir.resolve("meta.properties"), ("version=0\nbroker.id=" + brokerId).getBytes(StandardCharsets.UTF_8));
