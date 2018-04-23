@@ -24,6 +24,7 @@ Version | Kafka Version
 3.1.1   | 0.11.0.1
 4.0.0   | 1.0.0
 4.1.0   | 1.0.0 (JUnit 5 support)
+4.1.1   | 1.1.0
 
 
 Installation
