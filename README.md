@@ -23,7 +23,7 @@ Version | Kafka Version
 3.1.0   | 0.11.0.0
 3.1.1   | 0.11.0.1
 4.0.0   | 1.0.0
-4.1.0   | 1.0.0 (JUnit 5 support)
+4.1.0   | 1.0.0 (Adds support both Junit 4 and 5)
 4.1.1   | 1.1.0
 
 
