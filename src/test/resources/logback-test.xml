@@ -31,15 +31,15 @@
         <appender-ref ref="STDERR" />
     </appender>
 
-    <logger name="org.apache.kafka" level="INFO" additivity="false">
+    <logger name="org.apache" level="${LOG_LEVEL:-ERROR}" additivity="false">
         <appender-ref ref="ASYNC" />
     </logger>
 
-    <logger name="org.apache" level="WARN" additivity="false">
+    <logger name="kafka" level="${LOG_LEVEL:-ERROR}" additivity="false">
         <appender-ref ref="ASYNC" />
     </logger>
 
-    <root level="WARN">
+    <root level="ERROR">
         <appender-ref ref="ASYNC" />
     </root>
 </configuration>
