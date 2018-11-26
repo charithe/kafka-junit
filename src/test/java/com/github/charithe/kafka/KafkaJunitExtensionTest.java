@@ -1,5 +1,6 @@
 package com.github.charithe.kafka;
 
+import static com.github.charithe.kafka.EphemeralKafkaBrokerTest.TEN_SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.Lists;
@@ -36,7 +37,7 @@ class KafkaJunitExtensionTest {
 
             try (KafkaConsumer<String, String> consumer = kafkaHelper.createStringConsumer()) {
                 consumer.subscribe(Lists.newArrayList(TOPIC));
-                ConsumerRecords<String, String> records = consumer.poll(10000);
+                ConsumerRecords<String, String> records = consumer.poll(TEN_SECONDS);
                 Assertions.assertAll(() -> assertThat(records).isNotNull(),
                                      () -> assertThat(records.isEmpty()).isFalse());
 
