@@ -17,15 +17,6 @@
 package com.github.charithe.kafka;
 
 import com.google.common.collect.Lists;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Properties;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-
-import kafka.admin.AdminUtils;
 import org.apache.curator.test.InstanceSpec;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -37,11 +28,20 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 public class EphemeralKafkaBrokerTest {
 
-    public static final String TEST_TOPIC = "test-topic";
+    static final Duration TEN_SECONDS = Duration.ofSeconds(10);
+    static final String TEST_TOPIC = "test-topic";
 
     @Test
     public void testStartAndStop() throws Exception {
@@ -100,7 +100,7 @@ public class EphemeralKafkaBrokerTest {
 
             consumer.subscribe(Lists.newArrayList(TEST_TOPIC));
             ConsumerRecords<String, String> records;
-            records = consumer.poll(10000);
+            records = consumer.poll(Duration.ofSeconds(10));
             assertThat(records).isNotNull();
             assertThat(records.isEmpty()).isFalse();
 

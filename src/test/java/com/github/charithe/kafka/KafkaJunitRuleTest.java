@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 
+import static com.github.charithe.kafka.EphemeralKafkaBrokerTest.TEN_SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(Enclosed.class)
@@ -88,7 +89,7 @@ public class KafkaJunitRuleTest {
 
             try (KafkaConsumer<String, String> consumer = kafkaRule.helper().createStringConsumer()) {
                 consumer.subscribe(Lists.newArrayList(TOPIC));
-                ConsumerRecords<String, String> records = consumer.poll(10000);
+                ConsumerRecords<String, String> records = consumer.poll(TEN_SECONDS);
                 assertThat(records).isNotNull();
                 assertThat(records.isEmpty()).isFalse();
 

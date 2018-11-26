@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 
+import static com.github.charithe.kafka.EphemeralKafkaBrokerTest.TEN_SECONDS;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 public class EphemeralKafkaClusterTest {
@@ -60,7 +61,7 @@ public class EphemeralKafkaClusterTest {
             producer.flush();
 
             consumer.subscribe(Collections.singleton(TEST_TOPIC));
-            ConsumerRecords<Integer, String> poll = consumer.poll(10000);
+            ConsumerRecords<Integer, String> poll = consumer.poll(TEN_SECONDS);
             assertThat(poll.count()).isEqualTo(1);
             assertThat(poll.iterator().next().value()).isEqualTo("value");
         }
@@ -80,7 +81,7 @@ public class EphemeralKafkaClusterTest {
             consumer.subscribe(Collections.singleton(TEST_TOPIC2));
             int count = 0;
             for(int i = 0 ; i < 10 ; ++i) {
-                ConsumerRecords<Integer, String> poll = consumer.poll(1000);
+                ConsumerRecords<Integer, String> poll = consumer.poll(TEN_SECONDS);
                 count += poll.count();
                 if(count == 3)
                     break;
@@ -98,7 +99,7 @@ public class EphemeralKafkaClusterTest {
             consumer.subscribe(Collections.singleton(TEST_TOPIC2));
             int count = 0;
             for(int i = 0 ; i < 10 ; ++i) {
-                ConsumerRecords<Integer, String> poll = consumer.poll(1000);
+                ConsumerRecords<Integer, String> poll = consumer.poll(TEN_SECONDS);
                 count += poll.count();
                 if(count == 6)
                     break;

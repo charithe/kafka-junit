@@ -26,6 +26,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import static com.github.charithe.kafka.EphemeralKafkaBrokerTest.TEN_SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class KafkaJunitClassRuleTest {
@@ -43,7 +44,7 @@ public class KafkaJunitClassRuleTest {
 
         try (KafkaConsumer<String, String> consumer = kafkaRule.helper().createStringConsumer()) {
             consumer.subscribe(Lists.newArrayList(TOPIC));
-            ConsumerRecords<String, String> records = consumer.poll(10000);
+            ConsumerRecords<String, String> records = consumer.poll(TEN_SECONDS);
             assertThat(records).isNotNull();
             assertThat(records.isEmpty()).isFalse();
 
