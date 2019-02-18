@@ -40,7 +40,9 @@ public class EphemeralKafkaCluster implements AutoCloseable {
     /**
      * Create a new ephemeral Kafka cluster
      *
+     * @param numBroker number of brokers
      * @return EphemeralKafkaCluster
+     * @throws Exception if create fails
      */
     public static EphemeralKafkaCluster create(int numBroker) throws Exception {
         return create(numBroker, ALLOCATE_RANDOM_PORT);
@@ -49,8 +51,10 @@ public class EphemeralKafkaCluster implements AutoCloseable {
     /**
      * Create a new ephemeral Kafka cluster with the specified Zookeeper port
      *
+     * @param numBroker Number of brokers
      * @param zookeeperPort Port the Zookeeper should listen on
      * @return EphemeralKafkaCluster
+     * @throws Exception if create fails
      */
     public static EphemeralKafkaCluster create(int numBroker, int zookeeperPort) throws Exception {
         return new EphemeralKafkaCluster(numBroker, zookeeperPort);
@@ -139,6 +143,7 @@ public class EphemeralKafkaCluster implements AutoCloseable {
     /**
      * Create a minimal consumer configuration. Offset is set to "earliest".
      *
+     * @param enableAutoCommit Enable auto commit
      * @return Properties
      */
     public Properties consumerConfig(boolean enableAutoCommit) {

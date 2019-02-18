@@ -112,9 +112,6 @@ public class EphemeralKafkaBroker {
         this.managedZk = true;
     }
 
-    /**
-     * Start the Kafka broker
-     */
     public CompletableFuture<Void> start() throws Exception {
         if (!brokerStarted) {
             synchronized (this) {
@@ -128,7 +125,7 @@ public class EphemeralKafkaBroker {
     }
 
     private CompletableFuture<Void> startBroker() throws Exception {
-        if(!this.managedZk) {
+        if (!this.managedZk) {
             if (zookeeperPort == ALLOCATE_RANDOM_PORT) {
                 zookeeper = new TestingServer(true);
                 zookeeperPort = zookeeper.getPort();
@@ -145,16 +142,13 @@ public class EphemeralKafkaBroker {
         kafkaServer = new KafkaServerStartable(kafkaConfig);
         brokerStarted = true;
         final Integer brokerId = kafkaServer.staticServerConfig().getInt(KafkaConfig.BrokerIdProp());
-        if(brokerId != null) {
+        if (brokerId != null) {
             /* Avoid warning for missing meta.properties */
             Files.write(kafkaLogDir.resolve("meta.properties"), ("version=0\nbroker.id=" + brokerId).getBytes(StandardCharsets.UTF_8));
         }
         return CompletableFuture.runAsync(() -> kafkaServer.startup());
     }
 
-    /**
-     * Stop the Kafka broker
-     */
     public void stop() throws ExecutionException, InterruptedException {
         if (brokerStarted) {
             synchronized (this) {
@@ -262,7 +256,7 @@ public class EphemeralKafkaBroker {
 
     /**
      * Create a minimal consumer configuration. Offset is set to "earliest".
-     *
+     * @param enableAutoCommit Enable auto commit
      * @return Properties
      */
     public Properties consumerConfig(boolean enableAutoCommit) {
