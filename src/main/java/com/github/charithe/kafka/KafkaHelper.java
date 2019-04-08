@@ -274,7 +274,7 @@ public class KafkaHelper {
     public ListenableFuture<List<String>> consumeStrings(String topic, int numMessagesToConsume) {
         KafkaConsumer<String, String> consumer = createStringConsumer();
         ListenableFuture<List<ConsumerRecord<String, String>>> records = consume(topic, consumer, numMessagesToConsume);
-        return Futures.transform(records, this::extractValues);
+        return Futures.transform(records, this::extractValues, MoreExecutors.directExecutor());
     }
 
     private List<String> extractValues(List<ConsumerRecord<String, String>> records) {
