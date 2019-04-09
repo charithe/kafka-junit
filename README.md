@@ -4,14 +4,14 @@ Kafka JUnit [![Build Status](https://travis-ci.org/charithe/kafka-junit.svg?bran
 Kafka Junit provides helpers for starting and tearing down a Kafka broker during tests.
 
 
-**Please note that version 3.x.x drops Java 7 support and contains breaking API changes.** 
+**Please note that version 3.x.x drops Java 7 support and contains breaking API changes.**
 
 
-Version | Kafka Version 
+Version | Kafka Version
 --------|---------------
-1.6     | 0.8.2.1       
-1.7     | 0.8.2.2       
-1.8     | 0.9.0.0  
+1.6     | 0.8.2.1
+1.7     | 0.8.2.2
+1.8     | 0.9.0.0
 2.3     | 0.9.0.1
 2.4     | 0.10.0.0
 2.5     | 0.10.0.1
@@ -28,6 +28,7 @@ Version | Kafka Version
 4.1.2   | 2.0.0
 4.1.3   | 2.1.0
 4.1.4   | 2.1.1
+4.1.5   | 2.2.0
 
 
 Installation
@@ -88,9 +89,9 @@ public void testSomething(){
 }
 ```
 
-`EphemeralKafkaBroker` contains the core logic used by the JUnit rule and can be used independently. 
+`EphemeralKafkaBroker` contains the core logic used by the JUnit rule and can be used independently.
 
-`KafkaHelper` contains a bunch of convenience methods to work with the `EphemeralKafkaBroker` 
+`KafkaHelper` contains a bunch of convenience methods to work with the `EphemeralKafkaBroker`
 
 ### JUnit 5
 
@@ -105,19 +106,19 @@ dependency injection for constructors and methods for the classes `KafkaHelper` 
 @ExtendWith(KafkaJunitExtension.class)
 @KafkaJunitExtensionConfig(startupMode = StartupMode.WAIT_FOR_STARTUP)
 class MyTestClass {
-    
+
     @Test
     void testSomething(KafkaHelper kafkaHelper) throws ExecutionException, InterruptedException {
         // Convenience methods to produce and consume messages
         kafkaHelper.produceStrings("my-test-topic", "a", "b", "c", "d", "e");
         List<String> result = kafkaHelper.consumeStrings("my-test-topic", 5).get();
         assertThat(result).containsExactlyInAnyOrder("a", "b", "c", "d", "e");
-    
+
         // or use the built-in producers and consumers
         KafkaProducer<String, String> producer = kafkaHelper.createStringProducer();
-    
+
         KafkaConsumer<String, String> consumer = kafkaHelper.createStringConsumer();
-    
+
         // Alternatively, the Zookeeper connection String and the broker port can be retrieved to generate your own config
         String zkConnStr = kafkaHelper.zookeeperConnectionString();
         int brokerPort = kafkaHelper.kafkaPort();
