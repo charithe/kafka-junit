@@ -17,21 +17,22 @@
 package com.github.charithe.kafka;
 
 import com.google.common.collect.Lists;
-import java.util.Properties;
-import kafka.admin.AdminUtils;
-import kafka.utils.ZKStringSerializer$;
-import kafka.utils.ZkUtils;
-import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.ZkConnection;
+import kafka.zk.AdminZkClient;
+import kafka.zk.KafkaZkClient;
+import kafka.zookeeper.ZooKeeperClient;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.security.JaasUtils;
+import org.apache.kafka.common.utils.Time;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
+
+import java.util.Properties;
 
 import static com.github.charithe.kafka.EphemeralKafkaBrokerTest.TEN_SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -73,14 +74,12 @@ public class KafkaJunitRuleTest {
         public void testKafkaServerIsUp() {
             // Setup Zookeeper client
             final String zkConnectionString = kafkaRule.helper().zookeeperConnectionString();
-            final ZkClient zkClient = new ZkClient(
-                zkConnectionString, 1000, 8000, ZKStringSerializer$.MODULE$
-            );
-            final ZkConnection zkConnection = new ZkConnection(zkConnectionString);
-            final ZkUtils zkUtils = new ZkUtils(zkClient, zkConnection, false);
+            final ZooKeeperClient zooKeeperClient = new ZooKeeperClient(zkConnectionString, 2000, 8000, Integer.MAX_VALUE, Time.SYSTEM,"kafka.server", "SessionExpireListener" );
+            final KafkaZkClient zkClient = new KafkaZkClient(zooKeeperClient, JaasUtils.isZkSecurityEnabled(), Time.SYSTEM);
+            final AdminZkClient adminZkClient = new AdminZkClient(zkClient);
 
             // Create topic
-            AdminUtils.createTopic(zkUtils, TOPIC, 1, 1, new Properties(), null);
+            adminZkClient.createTopic(TOPIC, 1, 1, new Properties(), null);
 
             // Produce/consume test
             try (KafkaProducer<String, String> producer = kafkaRule.helper().createStringProducer()) {

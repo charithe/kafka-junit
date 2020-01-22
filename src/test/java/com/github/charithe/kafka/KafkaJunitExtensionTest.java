@@ -1,25 +1,25 @@
 package com.github.charithe.kafka;
 
-import static com.github.charithe.kafka.EphemeralKafkaBrokerTest.TEN_SECONDS;
-import static org.assertj.core.api.Assertions.assertThat;
-
 import com.google.common.collect.Lists;
-import kafka.admin.AdminUtils;
-import kafka.utils.ZKStringSerializer$;
-import kafka.utils.ZkUtils;
-import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.ZkConnection;
+import kafka.zk.AdminZkClient;
+import kafka.zk.KafkaZkClient;
+import kafka.zookeeper.ZooKeeperClient;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.security.JaasUtils;
+import org.apache.kafka.common.utils.Time;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Properties;
+
+import static com.github.charithe.kafka.EphemeralKafkaBrokerTest.TEN_SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class KafkaJunitExtensionTest {
 
@@ -58,12 +58,12 @@ class KafkaJunitExtensionTest {
         void testKafkaServerIsUp(KafkaHelper kafkaHelper) {
             // Setup Zookeeper client
             final String zkConnectionString = kafkaHelper.zookeeperConnectionString();
-            final ZkClient zkClient = new ZkClient(zkConnectionString, 1000, 8000, ZKStringSerializer$.MODULE$);
-            final ZkConnection zkConnection = new ZkConnection(zkConnectionString);
-            final ZkUtils zkUtils = new ZkUtils(zkClient, zkConnection, false);
+            final ZooKeeperClient zooKeeperClient = new ZooKeeperClient(zkConnectionString, 2000, 8000, Integer.MAX_VALUE, Time.SYSTEM,"kafka.server", "SessionExpireListener" );
+            final KafkaZkClient zkClient = new KafkaZkClient(zooKeeperClient, JaasUtils.isZkSecurityEnabled(), Time.SYSTEM);
+            final AdminZkClient adminZkClient = new AdminZkClient(zkClient);
 
             // Create topic
-            AdminUtils.createTopic(zkUtils, TOPIC, 1, 1, new Properties(), null);
+            adminZkClient.createTopic(TOPIC, 1, 1, new Properties(), null);
 
             // Produce/consume test
             try (KafkaProducer<String, String> producer = kafkaHelper.createStringProducer()) {
