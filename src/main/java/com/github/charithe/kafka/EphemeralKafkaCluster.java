@@ -29,11 +29,11 @@ public class EphemeralKafkaCluster implements AutoCloseable {
     private TestingServer zookeeper;
     private final List<EphemeralKafkaBroker> brokers = new ArrayList<>();
 
-    private EphemeralKafkaCluster(int numBroker, int zookeeperPort) throws Exception {
+    private EphemeralKafkaCluster(int numBroker, int zookeeperPort, Properties brokerProperties) throws Exception {
         this.zookeeper = new TestingServer(zookeeperPort);
         this.numBroker = numBroker;
-        for (int i = 0; i< numBroker; ++i){
-            this.addBroker();
+        for (int i = 0; i< numBroker; ++i) {
+            this.addBroker(brokerProperties);
         }
     }
 
@@ -57,7 +57,20 @@ public class EphemeralKafkaCluster implements AutoCloseable {
      * @throws Exception if create fails
      */
     public static EphemeralKafkaCluster create(int numBroker, int zookeeperPort) throws Exception {
-        return new EphemeralKafkaCluster(numBroker, zookeeperPort);
+        return create(numBroker, zookeeperPort, new Properties());
+    }
+
+    /**
+     * Create a new ephemeral Kafka cluster with the specified Zookeeper port and broker properties
+     *
+     * @param numBroker Number of brokers
+     * @param zookeeperPort Port the Zookeeper should listen on
+     * @param brokerProperties Override properties for all brokers in the cluster
+     * @return EphemeralKafkaCluster
+     * @throws Exception if create fails
+     */
+    public static EphemeralKafkaCluster create(int numBroker, int zookeeperPort, Properties brokerProperties) throws Exception {
+        return new EphemeralKafkaCluster(numBroker, zookeeperPort, brokerProperties);
     }
 
     public boolean isHealthy() {
@@ -74,7 +87,7 @@ public class EphemeralKafkaCluster implements AutoCloseable {
         zookeeper.stop();
     }
 
-    private EphemeralKafkaBroker addBroker() throws Exception {
+    private EphemeralKafkaBroker addBroker(Properties overrideBrokerProperties) throws Exception {
         final int brokerPort = InstanceSpec.getRandomPort();
         Properties brokerConfigProperties = new Properties();
         brokerConfigProperties.setProperty(KafkaConfig.BrokerIdProp(), brokers.size() + "");
@@ -98,6 +111,9 @@ public class EphemeralKafkaCluster implements AutoCloseable {
         brokerConfigProperties.setProperty(KafkaConfig.AdvertisedListenersProp(), "PLAINTEXT://localhost:" + brokerPort);
         brokerConfigProperties.setProperty(KafkaConfig.HostNameProp(), "localhost");
         brokerConfigProperties.setProperty(KafkaConfig.MinInSyncReplicasProp(), Math.max(1, numBroker - 1) + "");
+        if(!overrideBrokerProperties.isEmpty()){
+            overrideBrokerProperties.forEach((k, v) -> brokerConfigProperties.put(k, v));
+        }
         final EphemeralKafkaBroker broker = new EphemeralKafkaBroker(zookeeper, brokerPort, brokerConfigProperties);
         broker.start().get();
         brokers.add(broker);
