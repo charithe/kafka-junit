@@ -47,7 +47,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
-        <kafka.version>2.4.0</kafka.version>
+        <kafka.version>2.4.1</kafka.version>
         <junit.version>4.13</junit.version>
         <junit.jupiter.version>5.4.0</junit.jupiter.version>
         <junit.vintage.version>5.4.0</junit.vintage.version>

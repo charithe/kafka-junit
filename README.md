@@ -31,6 +31,7 @@ Version | Kafka Version
 4.1.5   | 2.2.0
 4.1.6   | 2.3.0
 4.1.7   | 2.4.0  
+4.1.8   | 2.4.1
 
 
 Installation
