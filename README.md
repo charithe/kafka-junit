@@ -6,6 +6,8 @@ Kafka Junit provides helpers for starting and tearing down a Kafka broker during
 
 **Please note that version 3.x.x drops Java 7 support and contains breaking API changes.**
 
+<details>
+    <summary>Version support matrix</summary>
 
 Version | Kafka Version
 --------|---------------
@@ -32,7 +34,9 @@ Version | Kafka Version
 4.1.6   | 2.3.0
 4.1.7   | 2.4.0  
 4.1.8   | 2.4.1
+4.1.9   | 2.5.0
 
+</details>
 
 Installation
 -------------
