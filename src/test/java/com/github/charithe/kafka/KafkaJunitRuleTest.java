@@ -75,7 +75,7 @@ public class KafkaJunitRuleTest {
             // Setup Zookeeper client
             final String zkConnectionString = kafkaRule.helper().zookeeperConnectionString();
             final ZooKeeperClient zooKeeperClient = new ZooKeeperClient(zkConnectionString, 2000, 8000, Integer.MAX_VALUE, Time.SYSTEM,"kafka.server", "SessionExpireListener" );
-            final KafkaZkClient zkClient = new KafkaZkClient(zooKeeperClient, JaasUtils.isZkSecurityEnabled(), Time.SYSTEM);
+            final KafkaZkClient zkClient = new KafkaZkClient(zooKeeperClient, JaasUtils.isZkSaslEnabled(), Time.SYSTEM);
             final AdminZkClient adminZkClient = new AdminZkClient(zkClient);
 
             // Create topic
