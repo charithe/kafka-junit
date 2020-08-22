@@ -16,7 +16,7 @@ class KafkaJunitExtensionConfigTest {
             Assertions.assertAll(() -> Assertions.assertEquals(KafkaJunitExtensionConfig.ALLOCATE_RANDOM_PORT, defaultConfig.kafkaPort()),
                                  () -> Assertions.assertEquals(KafkaJunitExtensionConfig.ALLOCATE_RANDOM_PORT, defaultConfig.zooKeeperPort()),
                                  () -> Assertions.assertEquals(StartupMode.DEFAULT, defaultConfig.startupMode()),
-                                 () -> Assertions.assertEquals("", defaultConfig.propsPath()));
+                                 () -> Assertions.assertEquals("", defaultConfig.propsFileName()));
         }
     }
 
@@ -30,12 +30,12 @@ class KafkaJunitExtensionConfigTest {
             Assertions.assertAll(() -> Assertions.assertEquals(KafkaJunitExtensionConfig.ALLOCATE_RANDOM_PORT, defaultConfig.kafkaPort()),
                                  () -> Assertions.assertEquals(KafkaJunitExtensionConfig.ALLOCATE_RANDOM_PORT, defaultConfig.zooKeeperPort()),
                                  () -> Assertions.assertEquals(StartupMode.WAIT_FOR_STARTUP, defaultConfig.startupMode()),
-                                 () -> Assertions.assertEquals("", defaultConfig.propsPath()));
+                                 () -> Assertions.assertEquals("", defaultConfig.propsFileName()));
         }
     }
 
     @Nested
-    @KafkaJunitExtensionConfig(startupMode = StartupMode.WAIT_FOR_STARTUP, kafkaPort = 1234, zooKeeperPort = 5678, propsPath = "src/main/resources/config.properties")
+    @KafkaJunitExtensionConfig(startupMode = StartupMode.WAIT_FOR_STARTUP, kafkaPort = 1234, zooKeeperPort = 5678, propsFileName = "src/main/resources/config.properties")
     static class FullConfigTest {
 
         @Test
@@ -44,7 +44,7 @@ class KafkaJunitExtensionConfigTest {
             Assertions.assertAll(() -> Assertions.assertEquals(1234, defaultConfig.kafkaPort()),
                                  () -> Assertions.assertEquals(5678, defaultConfig.zooKeeperPort()),
                                  () -> Assertions.assertEquals(StartupMode.WAIT_FOR_STARTUP, defaultConfig.startupMode()),
-                                 () -> Assertions.assertEquals("src/main/resources/config.properties", defaultConfig.propsPath()));
+                                 () -> Assertions.assertEquals("src/main/resources/config.properties", defaultConfig.propsFileName()));
         }
     }
 

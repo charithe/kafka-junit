@@ -3,6 +3,7 @@ package com.github.charithe.kafka;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -50,7 +51,7 @@ public class KafkaJunitExtension
 	public void beforeAll(ExtensionContext extensionContext) {
 		KafkaJunitExtensionConfig kafkaConfig = getKafkaConfig(extensionContext);
 		EphemeralKafkaBroker broker = EphemeralKafkaBroker.create(kafkaConfig.kafkaPort(), kafkaConfig.zooKeeperPort(),
-				loadPropsFromFile(kafkaConfig.propsPath()));
+				loadPropsFromClasspath(kafkaConfig.propsFileName()));
 		extensionContext.getStore(KAFKA_JUNIT).put(EphemeralKafkaBroker.class, broker);
 		extensionContext.getStore(KAFKA_JUNIT).put(StartupMode.class, kafkaConfig.startupMode());
 		extensionContext.getStore(KAFKA_JUNIT).put(KafkaHelper.class, KafkaHelper.createFor(broker));
@@ -102,15 +103,13 @@ public class KafkaJunitExtension
 		Class<?> parameterType = parameterContext.getParameter().getType();
 		return extensionContext.getStore(KAFKA_JUNIT).get(parameterType, parameterType);
 	}
-
-	private Properties loadPropsFromFile(String path) {
+	
+	private Properties loadPropsFromClasspath(String fileName) {
 		Properties prop = new Properties();
-		if (!path.isBlank()) {
-			try (InputStream input = new FileInputStream(path)) {
-				prop.load(input);
-			} catch (IOException ex) {
-				throw new RuntimeException(ex);
-			}
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(fileName)) {
+			if (is != null) prop.load(is);
+		} catch (IOException ex) {
+			throw new RuntimeException(ex);
 		}
 		return prop;
 	}

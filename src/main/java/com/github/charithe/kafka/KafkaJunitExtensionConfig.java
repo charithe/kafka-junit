@@ -17,6 +17,6 @@ public @interface KafkaJunitExtensionConfig {
 
     StartupMode startupMode() default StartupMode.DEFAULT;
     
-    String propsPath() default "";
+    String propsFileName() default "";
     
 }
