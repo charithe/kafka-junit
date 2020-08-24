@@ -15,7 +15,8 @@ class KafkaJunitExtensionConfigTest {
             KafkaJunitExtensionConfig defaultConfig = DefaultConfigTest.class.getAnnotation(KafkaJunitExtensionConfig.class);
             Assertions.assertAll(() -> Assertions.assertEquals(KafkaJunitExtensionConfig.ALLOCATE_RANDOM_PORT, defaultConfig.kafkaPort()),
                                  () -> Assertions.assertEquals(KafkaJunitExtensionConfig.ALLOCATE_RANDOM_PORT, defaultConfig.zooKeeperPort()),
-                                 () -> Assertions.assertEquals(StartupMode.DEFAULT, defaultConfig.startupMode()));
+                                 () -> Assertions.assertEquals(StartupMode.DEFAULT, defaultConfig.startupMode()),
+                                 () -> Assertions.assertEquals("", defaultConfig.propsFileName()));
         }
     }
 
@@ -28,12 +29,13 @@ class KafkaJunitExtensionConfigTest {
             KafkaJunitExtensionConfig defaultConfig = PartialConfigTest.class.getAnnotation(KafkaJunitExtensionConfig.class);
             Assertions.assertAll(() -> Assertions.assertEquals(KafkaJunitExtensionConfig.ALLOCATE_RANDOM_PORT, defaultConfig.kafkaPort()),
                                  () -> Assertions.assertEquals(KafkaJunitExtensionConfig.ALLOCATE_RANDOM_PORT, defaultConfig.zooKeeperPort()),
-                                 () -> Assertions.assertEquals(StartupMode.WAIT_FOR_STARTUP, defaultConfig.startupMode()));
+                                 () -> Assertions.assertEquals(StartupMode.WAIT_FOR_STARTUP, defaultConfig.startupMode()),
+                                 () -> Assertions.assertEquals("", defaultConfig.propsFileName()));
         }
     }
 
     @Nested
-    @KafkaJunitExtensionConfig(startupMode = StartupMode.WAIT_FOR_STARTUP, kafkaPort = 1234, zooKeeperPort = 5678)
+    @KafkaJunitExtensionConfig(startupMode = StartupMode.WAIT_FOR_STARTUP, kafkaPort = 1234, zooKeeperPort = 5678, propsFileName = "src/main/resources/config.properties")
     static class FullConfigTest {
 
         @Test
@@ -41,7 +43,8 @@ class KafkaJunitExtensionConfigTest {
             KafkaJunitExtensionConfig defaultConfig = FullConfigTest.class.getAnnotation(KafkaJunitExtensionConfig.class);
             Assertions.assertAll(() -> Assertions.assertEquals(1234, defaultConfig.kafkaPort()),
                                  () -> Assertions.assertEquals(5678, defaultConfig.zooKeeperPort()),
-                                 () -> Assertions.assertEquals(StartupMode.WAIT_FOR_STARTUP, defaultConfig.startupMode()));
+                                 () -> Assertions.assertEquals(StartupMode.WAIT_FOR_STARTUP, defaultConfig.startupMode()),
+                                 () -> Assertions.assertEquals("src/main/resources/config.properties", defaultConfig.propsFileName()));
         }
     }
 
