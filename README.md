@@ -36,6 +36,7 @@ Version | Kafka Version
 4.1.8   | 2.4.1
 4.1.9   | 2.5.0
 4.1.10  | 2.6.0
+4.1.11  | 2.6.0 (Scala 2.13)
 
 </details>
 
