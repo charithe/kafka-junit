@@ -18,15 +18,17 @@ package com.github.charithe.kafka;
 
 import com.google.common.collect.Maps;
 import kafka.server.KafkaConfig;
-import kafka.server.KafkaServerStartable;
+import kafka.server.KafkaServer;
 import org.apache.curator.test.InstanceSpec;
 import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.utils.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.Option;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -47,11 +49,11 @@ public class EphemeralKafkaBroker {
 
     private int kafkaPort;
     private int zookeeperPort;
-    private Properties overrideBrokerProperties;
+    private final Properties overrideBrokerProperties;
 
     private TestingServer zookeeper;
     private boolean managedZk = false;
-    private KafkaServerStartable kafkaServer;
+    private KafkaServer kafkaServer;
     private Path kafkaLogDir;
 
     private volatile boolean brokerStarted = false;
@@ -139,13 +141,11 @@ public class EphemeralKafkaBroker {
         KafkaConfig kafkaConfig = buildKafkaConfig(zookeeperConnectionString);
 
         LOGGER.info("Starting Kafka server with config: {}", kafkaConfig.props());
-        kafkaServer = new KafkaServerStartable(kafkaConfig);
+        Option<String> prefixOption = Option.apply("kafka-junit-");
+        kafkaServer = new KafkaServer(kafkaConfig, Time.SYSTEM, prefixOption, false);
         brokerStarted = true;
-        final Integer brokerId = kafkaServer.staticServerConfig().getInt(KafkaConfig.BrokerIdProp());
-        if (brokerId != null) {
-            /* Avoid warning for missing meta.properties */
-            Files.write(kafkaLogDir.resolve("meta.properties"), ("version=0\nbroker.id=" + brokerId).getBytes(StandardCharsets.UTF_8));
-        }
+        final int brokerId = kafkaServer.config().brokerId();
+        Files.write(kafkaLogDir.resolve("meta.properties"), ("version=0\nbroker.id=" + brokerId).getBytes(StandardCharsets.UTF_8));
         return CompletableFuture.runAsync(() -> kafkaServer.startup());
     }
 

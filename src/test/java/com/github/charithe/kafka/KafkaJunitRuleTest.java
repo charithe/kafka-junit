@@ -79,7 +79,7 @@ public class KafkaJunitRuleTest {
             final AdminZkClient adminZkClient = new AdminZkClient(zkClient);
 
             // Create topic
-            adminZkClient.createTopic(TOPIC, 1, 1, new Properties(), null);
+            adminZkClient.createTopic(TOPIC, 1, 1, new Properties(), null, false);
 
             // Produce/consume test
             try (KafkaProducer<String, String> producer = kafkaRule.helper().createStringProducer()) {
