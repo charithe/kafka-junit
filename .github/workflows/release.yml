@@ -37,4 +37,4 @@ jobs:
         run: |
           git config user.name "Charith Ellawala"
           git config user.email "charith@lucidelectricdreams.com"
-          mvn -B --file pom.xml release:prepare release:perform -Drepo.url=https://${GITHUB_ACTOR}:{{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git
+          mvn -B --file pom.xml release:prepare release:perform -Drepo.url=https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git
