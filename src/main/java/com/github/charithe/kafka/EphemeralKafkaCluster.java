@@ -95,7 +95,6 @@ public class EphemeralKafkaCluster implements AutoCloseable {
         brokerConfigProperties.setProperty(KafkaConfig.ControlledShutdownEnableProp(), false + "");
         brokerConfigProperties.setProperty(KafkaConfig.ControlledShutdownMaxRetriesProp(), "1");
         brokerConfigProperties.setProperty(KafkaConfig.DeleteTopicEnableProp(), true + "");
-        brokerConfigProperties.setProperty(KafkaConfig.PortProp(), "" + brokerPort);
         brokerConfigProperties.setProperty(KafkaConfig.SslEnabledProtocolsProp(), false + "");
         brokerConfigProperties.setProperty(KafkaConfig.AutoCreateTopicsEnableProp(), true + "");
         brokerConfigProperties.setProperty(KafkaConfig.ReplicaSocketTimeoutMsProp(), "300");
@@ -106,13 +105,10 @@ public class EphemeralKafkaCluster implements AutoCloseable {
         brokerConfigProperties.setProperty(KafkaConfig.LeaderImbalanceCheckIntervalSecondsProp(), 1 + "");
         brokerConfigProperties.setProperty(KafkaConfig.ZkSessionTimeoutMsProp(), 200 + "");
         brokerConfigProperties.setProperty(KafkaConfig.GroupInitialRebalanceDelayMsDoc(), 200 + "");
-        brokerConfigProperties.setProperty(KafkaConfig.AdvertisedHostNameProp(), "localhost");
-        brokerConfigProperties.setProperty(KafkaConfig.AdvertisedPortProp(), brokerPort + "");
         brokerConfigProperties.setProperty(KafkaConfig.AdvertisedListenersProp(), "PLAINTEXT://localhost:" + brokerPort);
-        brokerConfigProperties.setProperty(KafkaConfig.HostNameProp(), "localhost");
         brokerConfigProperties.setProperty(KafkaConfig.MinInSyncReplicasProp(), Math.max(1, numBroker - 1) + "");
         if(!overrideBrokerProperties.isEmpty()){
-            overrideBrokerProperties.forEach((k, v) -> brokerConfigProperties.put(k, v));
+            brokerConfigProperties.putAll(overrideBrokerProperties);
         }
         final EphemeralKafkaBroker broker = new EphemeralKafkaBroker(zookeeper, brokerPort, brokerConfigProperties);
         broker.start().get();
