@@ -27,6 +27,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.security.JaasUtils;
 import org.apache.kafka.common.utils.Time;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -74,7 +75,16 @@ public class KafkaJunitRuleTest {
         public void testKafkaServerIsUp() {
             // Setup Zookeeper client
             final String zkConnectionString = kafkaRule.helper().zookeeperConnectionString();
-            final ZooKeeperClient zooKeeperClient = new ZooKeeperClient(zkConnectionString, 2000, 8000, Integer.MAX_VALUE, Time.SYSTEM,"kafka.server", "SessionExpireListener" );
+            final ZooKeeperClient zooKeeperClient = new ZooKeeperClient(
+                    zkConnectionString,
+                    2000,
+                    8000,
+                    Integer.MAX_VALUE,
+                    Time.SYSTEM,
+                    "kafka.server",
+                    "SessionExpireListener",
+                    new ZKClientConfig(),
+                    "zk-client");
             final KafkaZkClient zkClient = new KafkaZkClient(zooKeeperClient, JaasUtils.isZkSaslEnabled(), Time.SYSTEM);
             final AdminZkClient adminZkClient = new AdminZkClient(zkClient);
 
