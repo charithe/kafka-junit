@@ -28,11 +28,9 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.Test;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -48,40 +46,30 @@ public class EphemeralKafkaBrokerTest {
         int kafkaPort = InstanceSpec.getRandomPort();
         int zkPort = InstanceSpec.getRandomPort();
         final EphemeralKafkaBroker broker = EphemeralKafkaBroker.create(kafkaPort, zkPort);
-        CompletableFuture<Void> res = broker.start();
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            //Ignore
-        }
+
+        assertThat(broker.start()).succeedsWithin(Duration.ofSeconds(3));
 
         assertThat(broker.isRunning()).isTrue();
-        assertThat(broker.getKafkaPort().get()).isEqualTo(kafkaPort);
-        assertThat(broker.getZookeeperPort().get()).isEqualTo(zkPort);
-        assertThat(broker.getBrokerList().isPresent()).isTrue();
-        assertThat(broker.getZookeeperConnectString().isPresent()).isTrue();
-        assertThat(broker.getLogDir().isPresent()).isTrue();
+        assertThat(broker.getKafkaPort()).hasValue(kafkaPort);
+        assertThat(broker.getZookeeperPort()).hasValue(zkPort);
+        assertThat(broker.getBrokerList()).isPresent();
+        assertThat(broker.getZookeeperConnectString()).isPresent();
+        assertThat(broker.getLogDir()).isPresent();
 
         Path logDir = Paths.get(broker.getLogDir().get());
-        assertThat(Files.exists(logDir)).isTrue();
+        assertThat(logDir).exists();
 
         broker.stop();
-        assertThat(res.isDone()).isTrue();
         assertThat(broker.isRunning()).isFalse();
-        assertThat(broker.getBrokerList().isPresent()).isFalse();
-        assertThat(broker.getZookeeperConnectString().isPresent()).isFalse();
-        assertThat(Files.exists(logDir)).isFalse();
+        assertThat(broker.getBrokerList()).isNotPresent();
+        assertThat(broker.getZookeeperConnectString()).isNotPresent();
+        assertThat(logDir).doesNotExist();
     }
 
     @Test
     public void testReadAndWrite() throws Exception {
         final EphemeralKafkaBroker broker = EphemeralKafkaBroker.create();
-        CompletableFuture<Void> res = broker.start();
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            //Ignore
-        }
+        assertThat(broker.start()).succeedsWithin(Duration.ofSeconds(3));
 
         assertThat(broker.isRunning()).isTrue();
 
@@ -102,7 +90,7 @@ public class EphemeralKafkaBrokerTest {
             ConsumerRecords<String, String> records;
             records = consumer.poll(Duration.ofSeconds(10));
             assertThat(records).isNotNull();
-            assertThat(records.isEmpty()).isFalse();
+            assertThat(records).isNotEmpty();
 
             ConsumerRecord<String, String> msg = records.iterator().next();
             assertThat(msg).isNotNull();
