@@ -43,6 +43,7 @@ Kafka Junit provides helpers for starting and tearing down a Kafka broker during
 | 4.2.3   | 3.2.1                                       |
 | 4.2.4   | 3.4.0                                       |
 | 4.2.5   | 3.5.0                                       |
+| 4.2.6   | 3.5.0 (Security update)                     |
 
 </details>
 
