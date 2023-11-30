@@ -70,7 +70,7 @@ class KafkaJunitExtensionTest {
                     new ZKClientConfig(),
                     "zk-client");
             final KafkaZkClient zkClient = new KafkaZkClient(zooKeeperClient, JaasUtils.isZkSaslEnabled(), Time.SYSTEM);
-            final AdminZkClient adminZkClient = new AdminZkClient(zkClient);
+            final AdminZkClient adminZkClient = new AdminZkClient(zkClient, scala.Option.empty() );
 
             // Create topic
             adminZkClient.createTopic(TOPIC, 1, 1, new Properties(), null, false);
